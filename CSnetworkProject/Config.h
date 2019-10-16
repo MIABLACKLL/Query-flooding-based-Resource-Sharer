@@ -29,12 +29,14 @@ public:
 	[[nodiscard]] const int const getPort();
 	[[nodiscard]] const std::set<std::string> const getConnectPeerID();
 
+	bool checkIP(std::string vIP);
+
 private:
 	std::map<std::string, std::map<std::string, std::string>> m_ConfigSet;
 	std::string m_FilePath = "PeerConfig.ini";
 	std::ifstream m_FileIn;
 	std::string m_RecentName;
-	std::string m_ValidIpPattern = "((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])";
+	std::string m_ValidIpPattern = "((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9]\\.)";
 
 	void __initConfigSet();
 
@@ -47,6 +49,7 @@ private:
 	inline std::set<std::string> __splitConnectPeerID(std::string vStrConnectPeerID);
 	inline bool __checkPort(int vPort);
 	inline bool __checkIP(std::string vIP);
+
 };
 
 //*********************************************************************
@@ -223,4 +226,11 @@ bool CConfig::__checkPort(int vPort)
 bool CConfig::__checkIP(std::string vIP)
 {
 	return std::regex_match(vIP,std::regex(m_ValidIpPattern));
+}
+
+//*********************************************************************
+//FUNCTION:
+bool CConfig::checkIP(std::string vIP)
+{
+	return std::regex_match(vIP, std::regex(m_ValidIpPattern));
 }

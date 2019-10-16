@@ -6,7 +6,7 @@
 #pragma comment(lib,"Ws2_32.lib")
 
 #include"FileManagement.h"
-
+#include"Config.h"
 constexpr auto BUF_SIZE = 128;
 
 //int test()
@@ -46,9 +46,12 @@ int main()
 {
 	using namespace std;
 	CFileManagement test;
-	std::regex m_ValidIpPattern("((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])");
-
-	cout << test.getCurrentPath();
-	cout << test.changeCurrentPath(">>>>>");
+	CConfig testConfig;
+	cout << testConfig.checkIP("111.11.11.111") << endl;
+	cout << test.getCurrentPath() << endl;
+	//cout << test.createDir("miablackll")<<endl;
+	//cout << test.changeCurrentPath("Debug") << endl;
+	//cout << test.getCurrentPath() << endl;
+	test.listCurrenPathFileAndDir();
 	system("pause");
 }
