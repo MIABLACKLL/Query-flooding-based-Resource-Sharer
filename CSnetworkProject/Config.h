@@ -6,12 +6,13 @@
 #include<set>
 #include<map>
 #include<algorithm>
+#include<regex>
 
 constexpr int BufferSize = 1024;
 constexpr int MinPort = 1024;
 constexpr int MaxPort = 65535;
 
-using namespace std;
+
 class CConfig
 {
 
@@ -19,32 +20,33 @@ public:
 	CConfig() { __initConfigSet(); }
 	~CConfig(void) = default;
 
-	void setFilePath(const string vFilePath) { m_FilePath = vFilePath; }
+	void setFilePath(const std::string vFilePath) { m_FilePath = vFilePath; }
 
 	[[nodiscard]] bool openConfigFile();
 	[[nodiscard]] bool readConfigFile();
-	[[nodiscard]] const string const getIP();
-	[[nodiscard]] const string const getSelfPeerID();
+	[[nodiscard]] const std::string const getIP();
+	[[nodiscard]] const std::string const getSelfPeerID();
 	[[nodiscard]] const int const getPort();
-	[[nodiscard]] const set<string> const getConnectPeerID();
+	[[nodiscard]] const std::set<std::string> const getConnectPeerID();
 
 private:
-	map<string, map<string, string>> m_ConfigSet;
-	string m_FilePath = "PeerConfig.ini";
-	ifstream m_FileIn;
-	string m_RecentName;
+	std::map<std::string, std::map<std::string, std::string>> m_ConfigSet;
+	std::string m_FilePath = "PeerConfig.ini";
+	std::ifstream m_FileIn;
+	std::string m_RecentName;
+	std::string m_ValidIpPattern = "((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])";
 
 	void __initConfigSet();
 
-	inline bool __isName(string vStrLine);
-	inline string __splitName(string vStrLine);
-	inline bool __appendName(string vName);
-	inline bool __isKeyValuePair(string vStrLine);
-	inline pair<string, string> __splitKeyValue(string vStrLine);
-	inline bool __appendKeyValue(pair<string, string> vKeyValue);
-	inline set<string> __splitConnectPeerID(string vStrConnectPeerID);
+	inline bool __isName(std::string vStrLine);
+	inline std::string __splitName(std::string vStrLine);
+	inline bool __appendName(std::string vName);
+	inline bool __isKeyValuePair(std::string vStrLine);
+	inline std::pair<std::string, std::string> __splitKeyValue(std::string vStrLine);
+	inline bool __appendKeyValue(std::pair<std::string, std::string> vKeyValue);
+	inline std::set<std::string> __splitConnectPeerID(std::string vStrConnectPeerID);
 	inline bool __checkPort(int vPort);
-	inline bool __checkIP(string vIP);
+	inline bool __checkIP(std::string vIP);
 };
 
 //*********************************************************************
@@ -54,7 +56,7 @@ bool CConfig::openConfigFile()
 	if (m_FileIn.is_open()) { m_FileIn.close(); }
 	m_FileIn.open(m_FilePath);
 	if (m_FileIn) { return true; }
-	cout << "Fail to read config file.Program exit.";
+	std::cout << "Fail to read config file.Program exit.";
 	system("pause");
 	exit(0);
 }
@@ -65,10 +67,10 @@ bool CConfig::readConfigFile()
 {
 	if (!m_FileIn) { return false; }
 	char StrLineBuffer[BufferSize];
-	string RecentName;
+	std::string RecentName;
 	while (m_FileIn.getline(StrLineBuffer, BufferSize))
 	{
-		string StrLine = StrLineBuffer;
+		std::string StrLine = StrLineBuffer;
 		if (__isName(StrLine)) 
 		{
 			m_RecentName = __splitName(StrLine);
@@ -81,11 +83,11 @@ bool CConfig::readConfigFile()
 
 //*********************************************************************
 //FUNCTION:
-const string const CConfig::getIP()
+const std::string const CConfig::getIP()
 {
-	string IP = m_ConfigSet["peer"]["IP"];
+	std::string IP = m_ConfigSet["peer"]["IP"];
 	if (__checkIP(IP)) { return IP; }
-	cout << "Fail to load config because of invalid IP.Program exit.";
+	std::cout << "Fail to load config because of invalid IP.Program exit.";
 	system("pause");
 	exit(0);
 }
@@ -96,23 +98,23 @@ const int const CConfig::getPort()
 {
 	int Port = stoi(m_ConfigSet["peer"]["PORT"]);
 	if (__checkPort(Port)) { return Port; }
-	cout << "Fail to load config because of invalid port.Program exit.";
+	std::cout << "Fail to load config because of invalid port.Program exit.";
 	system("pause");
 	exit(0);
 }
 
 //*********************************************************************
 //FUNCTION:
-const string const CConfig::getSelfPeerID()
+const std::string const CConfig::getSelfPeerID()
 {
 	return m_ConfigSet["peer"]["PEERID"];
 }
 
 //*********************************************************************
 //FUNCTION:
-const set<string> const CConfig::getConnectPeerID()
+const std::set<std::string> const CConfig::getConnectPeerID()
 {
-	set<string> ConnectPeerIDSet = __splitConnectPeerID(m_ConfigSet["peer"]["CONNECTPEER"]);
+	std::set<std::string> ConnectPeerIDSet = __splitConnectPeerID(m_ConfigSet["peer"]["CONNECTPEER"]);
 	ConnectPeerIDSet.erase(m_ConfigSet["peer"]["PEERID"]);
 	return ConnectPeerIDSet;
 }
@@ -121,16 +123,16 @@ const set<string> const CConfig::getConnectPeerID()
 //FUNCTION:
 void CConfig::__initConfigSet()
 {
-	m_ConfigSet.insert(make_pair("peer", map<string, string>()));
-	m_ConfigSet["peer"].insert(make_pair("IP",""));
-	m_ConfigSet["peer"].insert(make_pair("PORT", ""));
-	m_ConfigSet["peer"].insert(make_pair("PEERID", ""));
-	m_ConfigSet["peer"].insert(make_pair("CONNECTPEER", ""));
+	m_ConfigSet.insert(std::make_pair("peer", std::map<std::string, std::string>()));
+	m_ConfigSet["peer"].insert(std::make_pair("IP",""));
+	m_ConfigSet["peer"].insert(std::make_pair("PORT", ""));
+	m_ConfigSet["peer"].insert(std::make_pair("PEERID", ""));
+	m_ConfigSet["peer"].insert(std::make_pair("CONNECTPEER", ""));
 }
 
 //*********************************************************************
 //FUNCTION:
-bool CConfig::__isName(string vStrLine)
+bool CConfig::__isName(std::string vStrLine)
 {
 	if (vStrLine.size() > 2 && vStrLine.front() == '['&&vStrLine.back() == ']') { return true; }
 	return false;
@@ -138,19 +140,19 @@ bool CConfig::__isName(string vStrLine)
 
 //*********************************************************************
 //FUNCTION:
-string CConfig::__splitName(string vStrLine)
+std::string CConfig::__splitName(std::string vStrLine)
 {
 	return vStrLine.substr(1, vStrLine.size() - 2);
 }
 
 //*********************************************************************
 //FUNCTION:
-bool CConfig::__appendName(string vName)
+bool CConfig::__appendName(std::string vName)
 {
 	transform(vName.begin(), vName.end(), vName.begin(), ::tolower);
 	if (m_ConfigSet.find(vName) == m_ConfigSet.end())
 	{
-		m_ConfigSet.insert(make_pair(vName, map<string, string>()));
+		m_ConfigSet.insert(std::make_pair(vName, std::map<std::string, std::string>()));
 		return true;
 	}
 	return false;
@@ -158,7 +160,7 @@ bool CConfig::__appendName(string vName)
 
 //*********************************************************************
 //FUNCTION:
-bool CConfig::__isKeyValuePair(string vStrLine)
+bool CConfig::__isKeyValuePair(std::string vStrLine)
 {
 	int EqualIndex = vStrLine.find('=');
 	if (EqualIndex != 0 && EqualIndex != vStrLine.size() - 1 && EqualIndex != vStrLine.npos&&vStrLine.find_first_not_of('=') == vStrLine.find_last_of('=')) { return true; }
@@ -167,16 +169,16 @@ bool CConfig::__isKeyValuePair(string vStrLine)
 
 //*********************************************************************
 //FUNCTION:
-pair<string, string> CConfig::__splitKeyValue(string vStrLine)
+std::pair<std::string, std::string> CConfig::__splitKeyValue(std::string vStrLine)
 {
 	int EqualIndex = vStrLine.find('=');
-	pair<string, string> KeyValue = make_pair(vStrLine.substr(0, EqualIndex),vStrLine.substr(EqualIndex+1,vStrLine.size()- EqualIndex-1));
+	std::pair<std::string, std::string> KeyValue = std::make_pair(vStrLine.substr(0, EqualIndex),vStrLine.substr(EqualIndex+1,vStrLine.size()- EqualIndex-1));
 	return KeyValue;
 }
 
 //*********************************************************************
 //FUNCTION:
-bool CConfig::__appendKeyValue(pair<string, string> vKeyValue)
+bool CConfig::__appendKeyValue(std::pair<std::string, std::string> vKeyValue)
 {
 	auto Config = m_ConfigSet.find(m_RecentName);
 	if (Config != m_ConfigSet.end())
@@ -190,15 +192,15 @@ bool CConfig::__appendKeyValue(pair<string, string> vKeyValue)
 
 //*********************************************************************
 //FUNCTION:
-set<string> CConfig::__splitConnectPeerID(string vStrConnectPeerID)
+std::set<std::string> CConfig::__splitConnectPeerID(std::string vStrConnectPeerID)
 {
-	set<string> ConnectPeerIDList;
+	std::set<std::string> ConnectPeerIDList;
 	int BeginIndex = 0, SpacingIndex = 0;
 	for (auto ch : vStrConnectPeerID)
 	{
 		if (ch == ' ')
 		{
-			string StrPeerID = vStrConnectPeerID.substr(BeginIndex, SpacingIndex - BeginIndex);
+			std::string StrPeerID = vStrConnectPeerID.substr(BeginIndex, SpacingIndex - BeginIndex);
 			if (!StrPeerID.empty()) { ConnectPeerIDList.insert(StrPeerID); }
 			BeginIndex = SpacingIndex+1;
 		}
@@ -218,13 +220,7 @@ bool CConfig::__checkPort(int vPort)
 
 //*********************************************************************
 //FUNCTION:
-bool CConfig::__checkIP(string vIP)
+bool CConfig::__checkIP(std::string vIP)
 {
-	int IPNum[4];
-	if (sscanf_s(vIP.c_str(), "%d.%d.%d.%d", &IPNum[0], &IPNum[1], &IPNum[2], &IPNum[3]) &&
-		(IPNum[0] >= 0 && IPNum[0] <= 255) && (IPNum[1] >= 0 && IPNum[1] <= 255) && (IPNum[2] >= 0 && IPNum[2] <= 255) && (IPNum[3] >= 0 && IPNum[3] <= 255))
-	{
-		return true;
-	}
-	return false;
+	return std::regex_match(vIP,std::regex(m_ValidIpPattern));
 }
