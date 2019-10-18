@@ -29,9 +29,6 @@
     <ClInclude Include="FileManagement.h">
       <Filter>HeaderFiles</Filter>
     </ClInclude>
-    <ClInclude Include="PeerManagement.h">
-      <Filter>HeaderFiles</Filter>
-    </ClInclude>
     <ClInclude Include="Transfer.h">
       <Filter>HeaderFiles</Filter>
     </ClInclude>

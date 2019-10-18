@@ -123,7 +123,6 @@
   <ItemGroup>
     <ClInclude Include="Config.h" />
     <ClInclude Include="FileManagement.h" />
-    <ClInclude Include="PeerManagement.h" />
     <ClInclude Include="QueryFlooding.h" />
     <ClInclude Include="SystemCUI.h" />
     <ClInclude Include="Transfer.h" />

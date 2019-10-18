@@ -88,8 +88,8 @@ bool CConfig::readConfigFile()
 //FUNCTION:
 const std::string const CConfig::getIP()
 {
-	std::string IP = m_ConfigSet["peer"]["IP"];
-	if (__checkIP(IP)) { return IP; }
+	std::string voIP = m_ConfigSet["peer"]["IP"];
+	if (__checkIP(voIP)) { return voIP; }
 	std::cout << "Fail to load config because of invalid IP.Program exit.";
 	system("pause");
 	exit(0);
@@ -99,8 +99,8 @@ const std::string const CConfig::getIP()
 //FUNCTION:
 const int const CConfig::getPort()
 {
-	int Port = stoi(m_ConfigSet["peer"]["PORT"]);
-	if (__checkPort(Port)) { return Port; }
+	int voPort = stoi(m_ConfigSet["peer"]["PORT"]);
+	if (__checkPort(voPort)) { return voPort; }
 	std::cout << "Fail to load config because of invalid port.Program exit.";
 	system("pause");
 	exit(0);
@@ -117,9 +117,9 @@ const std::string const CConfig::getSelfPeerID()
 //FUNCTION:
 const std::set<std::string> const CConfig::getConnectPeerID()
 {
-	std::set<std::string> ConnectPeerIDSet = __splitConnectPeerID(m_ConfigSet["peer"]["CONNECTPEER"]);
-	ConnectPeerIDSet.erase(m_ConfigSet["peer"]["PEERID"]);
-	return ConnectPeerIDSet;
+	std::set<std::string> voConnectPeerIDSet = __splitConnectPeerID(m_ConfigSet["peer"]["CONNECTPEER"]);
+	voConnectPeerIDSet.erase(m_ConfigSet["peer"]["PEERID"]);
+	return voConnectPeerIDSet;
 }
 
 //*********************************************************************
@@ -175,8 +175,8 @@ bool CConfig::__isKeyValuePair(std::string vStrLine)
 std::pair<std::string, std::string> CConfig::__splitKeyValue(std::string vStrLine)
 {
 	int EqualIndex = vStrLine.find('=');
-	std::pair<std::string, std::string> KeyValue = std::make_pair(vStrLine.substr(0, EqualIndex),vStrLine.substr(EqualIndex+1,vStrLine.size()- EqualIndex-1));
-	return KeyValue;
+	std::pair<std::string, std::string> voKeyValue = std::make_pair(vStrLine.substr(0, EqualIndex),vStrLine.substr(EqualIndex+1,vStrLine.size()- EqualIndex-1));
+	return voKeyValue;
 }
 
 //*********************************************************************
@@ -197,20 +197,20 @@ bool CConfig::__appendKeyValue(std::pair<std::string, std::string> vKeyValue)
 //FUNCTION:
 std::set<std::string> CConfig::__splitConnectPeerID(std::string vStrConnectPeerID)
 {
-	std::set<std::string> ConnectPeerIDList;
+	std::set<std::string> voConnectPeerIDList;
 	int BeginIndex = 0, SpacingIndex = 0;
 	for (auto ch : vStrConnectPeerID)
 	{
 		if (ch == ' ')
 		{
 			std::string StrPeerID = vStrConnectPeerID.substr(BeginIndex, SpacingIndex - BeginIndex);
-			if (!StrPeerID.empty()) { ConnectPeerIDList.insert(StrPeerID); }
+			if (!StrPeerID.empty()) { voConnectPeerIDList.insert(StrPeerID); }
 			BeginIndex = SpacingIndex+1;
 		}
 		else
 			SpacingIndex++;
 	}
-	return ConnectPeerIDList;
+	return voConnectPeerIDList;
 }
 
 //*********************************************************************

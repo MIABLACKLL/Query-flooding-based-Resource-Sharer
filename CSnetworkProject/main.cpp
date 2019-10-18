@@ -53,5 +53,6 @@ int main()
 	//cout << test.changeCurrentPath("Debug") << endl;
 	//cout << test.getCurrentPath() << endl;
 	test.listCurrenPathFileAndDir();
+	cout << test.findFile("main.cpp");
 	system("pause");
 }

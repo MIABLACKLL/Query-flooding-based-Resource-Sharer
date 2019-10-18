@@ -11,9 +11,13 @@ public:
 	CFileManagement() { __initPath(); }
 	~CFileManagement() = default;
 
-	[[nodiscard]] std::string getCurrentPath();
+	[[nodiscard]] inline std::string getCurrentPath() { return m_CurrentPath.string(); }
+
 	[[nodiscard]] bool changeCurrentPath(std::string vDir);
 	[[nodiscard]] bool createDir(std::string vDir);
+	[[nodiscard]] bool setShareDir(std::string vDir);
+	[[nodiscard]] std::string findFile(std::string vFileName);
+	[[nodiscard]] bool findDir(std::string vFileName);//fixme:正在想怎么实现...
 
 	void listCurrenPathFileAndDir();
 
@@ -23,18 +27,10 @@ private:
 	std::filesystem::path m_ShareFilePath;
 	const std::string m_InvalidCharPattern = "[^\\?\"<>\\*\\|:\\.]+";
 
-	[[nodiscard]]bool __isOutRoot(std::string vDir);
-	[[nodiscard]]bool __isPathValid(std::string vDir);
+	[[nodiscard]] bool __isOutRoot(std::string vDir);
+	[[nodiscard]] inline bool __isPathValid(std::string vDir) { return std::regex_match(vDir, std::regex(m_InvalidCharPattern)); }
 	void __initPath();
 };
-
-
-//*********************************************************************
-//FUNCTION:
-std::string CFileManagement::getCurrentPath()
-{
-	return m_CurrentPath.string();
-}
 
 //*********************************************************************
 //FUNCTION:
@@ -66,6 +62,27 @@ bool CFileManagement::createDir(std::string vDir)
 
 //*********************************************************************
 //FUNCTION:
+bool CFileManagement::setShareDir(std::string vDir)
+{
+	if (!__isPathValid(vDir) || __isOutRoot(vDir))
+		return false;
+	m_ShareFilePath = m_ShareFilePath = std::filesystem::absolute(std::filesystem::path(vDir));
+}
+
+//*********************************************************************
+//FUNCTION:
+std::string CFileManagement::findFile(std::string vFileName)//fixme:暂时无法解决不同目录同名文件的问题
+{
+	for (auto p : std::filesystem::recursive_directory_iterator(m_ShareFilePath))
+	{
+		if (p.path().filename().string() == vFileName)
+			return std::filesystem::absolute(p.path()).string();
+	}
+	return std::string("");
+}
+
+//*********************************************************************
+//FUNCTION:
 void CFileManagement::listCurrenPathFileAndDir()
 {
 	for (auto p : std::filesystem::directory_iterator(m_CurrentPath))
@@ -84,13 +101,8 @@ void CFileManagement::__initPath()
 {
 	m_RootPath = std::filesystem::current_path();
 	m_CurrentPath = m_RootPath;
-}
-
-//*********************************************************************
-//FUNCTION:
-bool CFileManagement::__isPathValid(std::string vDir)
-{
-	return std::regex_match(vDir,std::regex(m_InvalidCharPattern));
+	m_ShareFilePath = std::filesystem::absolute(std::filesystem::path("share"));
+	if (!std::filesystem::exists(m_ShareFilePath)) { std::filesystem::create_directory(m_ShareFilePath); }
 }
 
 //*********************************************************************
