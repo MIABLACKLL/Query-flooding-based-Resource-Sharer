@@ -5,6 +5,13 @@
 #include<filesystem>
 #include<regex>
 
+struct SFile
+{
+	std::string FileName;
+	uintmax_t FileSize;
+	bool IsDir = false;
+};
+
 class CFileManagement
 {
 public:
@@ -13,11 +20,10 @@ public:
 
 	[[nodiscard]] inline std::string getCurrentPath() { return m_CurrentPath.string(); }
 
-	[[nodiscard]] bool changeCurrentPath(std::string vDir);
-	[[nodiscard]] bool createDir(std::string vDir);
-	[[nodiscard]] bool setShareDir(std::string vDir);
-	[[nodiscard]] std::string findFile(std::string vFileName);
-	[[nodiscard]] bool findDir(std::string vFileName);//fixme:正在想怎么实现...
+	[[nodiscard]] bool changeCurrentPath(std::string vPath);
+	[[nodiscard]] bool createDir(std::string vPath);
+	[[nodiscard]] bool setShareDir(std::string vPath);
+	[[nodiscard]] std::pair<SFile, bool> findFile(std::string vFileName);//bool记录文件是否文件是否存在
 
 	void listCurrenPathFileAndDir();
 
@@ -27,18 +33,18 @@ private:
 	std::filesystem::path m_ShareFilePath;
 	const std::string m_InvalidCharPattern = "[^\\?\"<>\\*\\|:\\.]+";
 
-	[[nodiscard]] bool __isOutRoot(std::string vDir);
-	[[nodiscard]] inline bool __isPathValid(std::string vDir) { return std::regex_match(vDir, std::regex(m_InvalidCharPattern)); }
+	[[nodiscard]] bool __isOutRoot(std::string vPath);
+	[[nodiscard]] inline bool __isPathValid(std::string vPath) { return std::regex_match(vPath, std::regex(m_InvalidCharPattern)); }
 	void __initPath();
 };
 
 //*********************************************************************
 //FUNCTION:
-bool CFileManagement::changeCurrentPath(std::string vDir)
+bool CFileManagement::changeCurrentPath(std::string vPath)
 {
-	if (!__isPathValid(vDir)||__isOutRoot(vDir))
+	if (!__isPathValid(vPath)||__isOutRoot(vPath))
 		return false;
-	auto NewPath = std::filesystem::path(vDir);
+	auto NewPath = std::filesystem::path(vPath);
 	try { NewPath = std::filesystem::absolute(NewPath); }
 	catch (...) { return false; }
 	if (std::filesystem::exists(NewPath) && std::filesystem::is_directory(NewPath))
@@ -52,33 +58,42 @@ bool CFileManagement::changeCurrentPath(std::string vDir)
 
 //*********************************************************************
 //FUNCTION:
-bool CFileManagement::createDir(std::string vDir)
+bool CFileManagement::createDir(std::string vPath)
 {
-	if (!__isPathValid(vDir)||__isOutRoot(vDir))
+	if (!__isPathValid(vPath)||__isOutRoot(vPath))
 		return false;
-	auto CreatePath = std::filesystem::path(vDir);
+	auto CreatePath = std::filesystem::path(vPath);
 	return std::filesystem::create_directory(CreatePath);
 }
 
 //*********************************************************************
 //FUNCTION:
-bool CFileManagement::setShareDir(std::string vDir)
+bool CFileManagement::setShareDir(std::string vPath)
 {
-	if (!__isPathValid(vDir) || __isOutRoot(vDir))
+	if (!__isPathValid(vPath) || __isOutRoot(vPath))
 		return false;
-	m_ShareFilePath = m_ShareFilePath = std::filesystem::absolute(std::filesystem::path(vDir));
+	m_ShareFilePath = m_ShareFilePath = std::filesystem::absolute(std::filesystem::path(vPath));
+	return true;
 }
 
 //*********************************************************************
 //FUNCTION:
-std::string CFileManagement::findFile(std::string vFileName)//fixme:暂时无法解决不同目录同名文件的问题
+std::pair<SFile, bool> CFileManagement::findFile(std::string vFileName)//从默认目录share开始查找。fixme:暂时无法解决不同目录同名文件/文件夹的问题
 {
+	auto voFile = std::make_pair(SFile(), false);
 	for (auto p : std::filesystem::recursive_directory_iterator(m_ShareFilePath))
 	{
 		if (p.path().filename().string() == vFileName)
-			return std::filesystem::absolute(p.path()).string();
+		{
+			voFile.second = true;
+			voFile.first.FileName = std::filesystem::absolute(p.path()).string();
+			voFile.first.FileSize = std::filesystem::file_size(voFile.first.FileName);
+			if (std::filesystem::is_directory(p.path()))
+				voFile.first.IsDir = true;
+			return voFile;
+		}
 	}
-	return std::string("");
+	return voFile;
 }
 
 //*********************************************************************
@@ -107,9 +122,9 @@ void CFileManagement::__initPath()
 
 //*********************************************************************
 //FUNCTION:
-bool CFileManagement::__isOutRoot(std::string vDir)
+bool CFileManagement::__isOutRoot(std::string vPath)
 {
-	std::filesystem::path Path = std::filesystem::absolute(std::filesystem::path(vDir));
+	std::filesystem::path Path = std::filesystem::absolute(std::filesystem::path(vPath));
 	if (Path.string().find(m_RootPath.string()) != Path.string().npos)
 		return false;
 	return true;

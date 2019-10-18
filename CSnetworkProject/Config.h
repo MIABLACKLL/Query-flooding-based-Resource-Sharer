@@ -24,10 +24,12 @@ public:
 
 	[[nodiscard]] bool openConfigFile();
 	[[nodiscard]] bool readConfigFile();
-	[[nodiscard]] const std::string const getIP();
-	[[nodiscard]] const std::string const getSelfPeerID();
-	[[nodiscard]] const int const getPort();
-	[[nodiscard]] const std::set<std::string> const getConnectPeerID();
+
+	[[nodiscard]] const std::string getIP();
+	[[nodiscard]] const std::string getSelfPeerID();
+	[[nodiscard]] const int getDataPort();
+	[[nodiscard]] const int getCommandPort();
+	[[nodiscard]] const std::set<std::string> getConnectPeerID();
 
 	bool checkIP(std::string vIP);
 
@@ -86,7 +88,7 @@ bool CConfig::readConfigFile()
 
 //*********************************************************************
 //FUNCTION:
-const std::string const CConfig::getIP()
+const std::string CConfig::getIP()
 {
 	std::string voIP = m_ConfigSet["peer"]["IP"];
 	if (__checkIP(voIP)) { return voIP; }
@@ -97,7 +99,7 @@ const std::string const CConfig::getIP()
 
 //*********************************************************************
 //FUNCTION:
-const int const CConfig::getPort()
+const int CConfig::getDataPort()
 {
 	int voPort = stoi(m_ConfigSet["peer"]["PORT"]);
 	if (__checkPort(voPort)) { return voPort; }
@@ -108,14 +110,25 @@ const int const CConfig::getPort()
 
 //*********************************************************************
 //FUNCTION:
-const std::string const CConfig::getSelfPeerID()
+const int CConfig::getCommandPort()
+{
+	int voPort = stoi(m_ConfigSet["peer"]["PORT"]);
+	if (__checkPort(voPort)) { return voPort; }
+	std::cout << "Fail to load config because of invalid port.Program exit.";
+	system("pause");
+	exit(0);
+}
+
+//*********************************************************************
+//FUNCTION:
+const std::string CConfig::getSelfPeerID()
 {
 	return m_ConfigSet["peer"]["PEERID"];
 }
 
 //*********************************************************************
 //FUNCTION:
-const std::set<std::string> const CConfig::getConnectPeerID()
+const std::set<std::string> CConfig::getConnectPeerID()
 {
 	std::set<std::string> voConnectPeerIDSet = __splitConnectPeerID(m_ConfigSet["peer"]["CONNECTPEER"]);
 	voConnectPeerIDSet.erase(m_ConfigSet["peer"]["PEERID"]);
@@ -128,7 +141,8 @@ void CConfig::__initConfigSet()
 {
 	m_ConfigSet.insert(std::make_pair("peer", std::map<std::string, std::string>()));
 	m_ConfigSet["peer"].insert(std::make_pair("IP",""));
-	m_ConfigSet["peer"].insert(std::make_pair("PORT", ""));
+	m_ConfigSet["peer"].insert(std::make_pair("DATAPORT", ""));
+	m_ConfigSet["peer"].insert(std::make_pair("COMMANDPORT", ""));
 	m_ConfigSet["peer"].insert(std::make_pair("PEERID", ""));
 	m_ConfigSet["peer"].insert(std::make_pair("CONNECTPEER", ""));
 }
