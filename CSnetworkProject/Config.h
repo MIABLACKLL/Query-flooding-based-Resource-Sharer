@@ -4,7 +4,7 @@
 #include<iostream>
 #include<any>
 #include<string>
-#include<set>
+#include<vector>
 #include<map>
 #include<algorithm>
 #include<regex>
@@ -30,14 +30,11 @@ public:
 	[[nodiscard]] const std::string getSelfPeerID();
 	[[nodiscard]] const int getDataPort();
 	[[nodiscard]] const int getCommandPort();
-	[[nodiscard]] const std::set<std::string> getConnectPeerID();
-	[[nodiscard]] const std::set<int> getConnectPeerCommandPort();
-	[[nodiscard]] const std::set<int> getConnectPeerDataPort();
-
-	bool checkIP(std::string vIP);
+	[[nodiscard]] const std::vector<std::map<std::string, std::any>> getConnectPeerSocket();
 
 private:
 	std::map<std::string, std::map<std::string, std::string>> m_ConfigSet;
+	std::vector<std::map<std::string,std::any>> m_PeerConfigSet;
 	std::string m_FilePath = "PeerConfig.ini";
 	std::ifstream m_FileIn;
 	std::string m_RecentName;
@@ -51,9 +48,12 @@ private:
 	inline bool __isKeyValuePair(std::string vStrLine);
 	inline std::pair<std::string, std::string> __splitKeyValue(std::string vStrLine);
 	inline bool __appendKeyValue(std::pair<std::string, std::string> vKeyValue);
-	template<typename T> inline std::set<T> __splitConnectPeer(std::string vStrConnectPeer);
+	template<typename T> inline std::vector<T> __splitConnectPeer(std::string vStrConnectPeer);
 	inline bool __checkPort(int vPort);
 	inline bool __checkIP(std::string vIP);
+	const std::vector<std::string> __getConnectPeerIP();
+	const std::vector<int> __getConnectPeerCommandPort();
+	const std::vector<int> __getConnectPeerDataPort();
 
 };
 
@@ -131,29 +131,30 @@ const std::string CConfig::getSelfPeerID()
 
 //*********************************************************************
 //FUNCTION:
-const std::set<std::string> CConfig::getConnectPeerID()
+const std::vector<std::map<std::string, std::any>> CConfig::getConnectPeerSocket()
 {
-	std::set<std::string> voConnectPeerIDSet = __splitConnectPeer<std::string>(m_ConfigSet["peer"]["CONNECTPEERID"]);
-	voConnectPeerIDSet.erase(m_ConfigSet["peer"]["PEERID"]);
-	return voConnectPeerIDSet;
-}
-
-//*********************************************************************
-//FUNCTION:
-const std::set<int> CConfig::getConnectPeerCommandPort()
-{
-	std::set<int> voConnectPeerCommandPortSet = __splitConnectPeer<int>(m_ConfigSet["peer"]["CONNECTPEER_COMMANDPORT"]);
-	voConnectPeerCommandPortSet.erase(stoi(m_ConfigSet["peer"]["COMMANDPORT"]));
-	return voConnectPeerCommandPortSet;
-}
-
-//*********************************************************************
-//FUNCTION:
-const std::set<int> CConfig::getConnectPeerDataPort()
-{
-	std::set<int> voConnectPeerPeerPortSet = __splitConnectPeer<int>(m_ConfigSet["peer"]["CONNECTPEER_DATAPORT"]);
-	voConnectPeerPeerPortSet.erase(stoi(m_ConfigSet["peer"]["DATAPORT"]));
-	return voConnectPeerPeerPortSet;
+	std::vector<std::map<std::string, std::any>> voConnectPeerSocketSet;
+	auto ConnectPeerIP = __getConnectPeerIP();
+	auto ConnectPeerCommandPort = __getConnectPeerCommandPort();
+	auto ConnectPeerDataPort = __getConnectPeerDataPort();
+	for (int i = 0; i < ConnectPeerIP.size(); i++)
+	{
+		std::map<std::string, std::any> SocketSet;
+		try
+		{
+			SocketSet.insert(std::make_pair("IP", ConnectPeerIP[i]));
+			SocketSet.insert(std::make_pair("COMMANDPORT", ConnectPeerCommandPort[i]));
+			SocketSet.insert(std::make_pair("DATAPORT", ConnectPeerDataPort[i]));
+		}
+		catch (...)
+		{
+			std::cout << "Peer socket data unequal.Program exit.";
+			system("pause");
+			exit(0);
+		}
+		voConnectPeerSocketSet.push_back(SocketSet);
+	}
+	return voConnectPeerSocketSet;
 }
 
 //*********************************************************************
@@ -165,7 +166,7 @@ void CConfig::__initConfigSet()
 	m_ConfigSet["peer"].insert(std::make_pair("DATAPORT", ""));
 	m_ConfigSet["peer"].insert(std::make_pair("COMMANDPORT", ""));
 	m_ConfigSet["peer"].insert(std::make_pair("PEERID", ""));
-	m_ConfigSet["peer"].insert(std::make_pair("CONNECTPEER_ID", ""));
+	m_ConfigSet["peer"].insert(std::make_pair("CONNECTPEER_IP", ""));
 	m_ConfigSet["peer"].insert(std::make_pair("CONNECTPEER_COMMANDPORT", ""));
 	m_ConfigSet["peer"].insert(std::make_pair("CONNECTPEER_DATAPORT", ""));
 }
@@ -233,9 +234,9 @@ bool CConfig::__appendKeyValue(std::pair<std::string, std::string> vKeyValue)
 //*********************************************************************
 //FUNCTION:
 template<typename T>
-std::set<T> CConfig::__splitConnectPeer(std::string vStrConnectPeer)
+std::vector<T> CConfig::__splitConnectPeer(std::string vStrConnectPeer)
 {
-	std::set<T> voConnectPeerIDList;
+	std::vector<T> voConnectPeerIDList;
 	int BeginIndex = 0, SpacingIndex = 0;
 	for (auto ch : vStrConnectPeer)
 	{
@@ -256,7 +257,7 @@ std::set<T> CConfig::__splitConnectPeer(std::string vStrConnectPeer)
 					}
 				}
 				else
-					voConnectPeerIDList.insert(std::any_cast<T>(StrPeer));
+					voConnectPeerIDList.push_back(std::any_cast<T>(StrPeer));
 			}
 			BeginIndex = SpacingIndex+1;
 		}
@@ -283,7 +284,24 @@ bool CConfig::__checkIP(std::string vIP)
 
 //*********************************************************************
 //FUNCTION:
-bool CConfig::checkIP(std::string vIP)
+const std::vector<std::string> CConfig::__getConnectPeerIP()
 {
-	return std::regex_match(vIP, std::regex(m_ValidIpPattern));
+	std::vector<std::string> voConnectPeerIPList = __splitConnectPeer<std::string>(m_ConfigSet["peer"]["CONNECTPEER_IP"]);
+	return voConnectPeerIPList;
+}
+
+//*********************************************************************
+//FUNCTION:
+const std::vector<int> CConfig::__getConnectPeerCommandPort()
+{
+	std::vector<int> voConnectPeerCommandPortList = __splitConnectPeer<int>(m_ConfigSet["peer"]["CONNECTPEER_COMMANDPORT"]);
+	return voConnectPeerCommandPortList;
+}
+
+//*********************************************************************
+//FUNCTION:
+const std::vector<int> CConfig::__getConnectPeerDataPort()
+{
+	std::vector<int> voConnectPeerPeerPortList = __splitConnectPeer<int>(m_ConfigSet["peer"]["CONNECTPEER_DATAPORT"]);
+	return voConnectPeerPeerPortList;
 }

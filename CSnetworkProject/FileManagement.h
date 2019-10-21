@@ -7,9 +7,11 @@
 
 struct SFile
 {
+	std::string FilePath;
 	std::string FileName;
 	uintmax_t FileSize;
 	bool IsDir = false;
+	bool IsExist = false;
 };
 
 class CFileManagement
@@ -86,7 +88,9 @@ std::pair<SFile, bool> CFileManagement::findFile(std::string vFileName)//╢сд╛ход
 		if (p.path().filename().string() == vFileName)
 		{
 			voFile.second = true;
-			voFile.first.FileName = std::filesystem::absolute(p.path()).string();
+			voFile.first.IsExist = true;
+			voFile.first.FilePath = std::filesystem::absolute(p.path()).string();
+			voFile.first.FileName = vFileName;
 			voFile.first.FileSize = std::filesystem::file_size(voFile.first.FileName);
 			if (std::filesystem::is_directory(p.path()))
 				voFile.first.IsDir = true;
