@@ -13,7 +13,8 @@ constexpr int BufferSize = 1024;
 constexpr int MinPort = 1024;
 constexpr int MaxPort = 65535;
 
-
+//fixme:尚有一些地方未做正确性检测，目前只保证在正确配置文件下正常读入，有空完善
+//实现读取ini配置文件，并转换为类
 class CConfig
 {
 
@@ -137,7 +138,7 @@ const std::vector<std::map<std::string, std::any>> CConfig::getConnectPeerSocket
 	auto ConnectPeerIP = __getConnectPeerIP();
 	auto ConnectPeerCommandPort = __getConnectPeerCommandPort();
 	auto ConnectPeerDataPort = __getConnectPeerDataPort();
-	for (int i = 0; i < ConnectPeerIP.size(); i++)
+	for (size_t i = 0; i < ConnectPeerIP.size(); i++)
 	{
 		std::map<std::string, std::any> SocketSet;
 		try
@@ -248,7 +249,7 @@ std::vector<T> CConfig::__splitConnectPeer(std::string vStrConnectPeer)
 				if (std::is_same<T, int>::value)
 				{
 					T voPort = std::any_cast<T>(stoi(m_ConfigSet["peer"]["COMMANDPORT"]));
-					if (__checkPort(std::any_cast<int>(voPort))) { voConnectPeerIDList.insert(voPort); }
+					if (__checkPort(std::any_cast<int>(voPort))) { voConnectPeerIDList.push_back(voPort); }
 					else
 					{
 						std::cout << "Fail to load config because of invalid port.Program exit.";

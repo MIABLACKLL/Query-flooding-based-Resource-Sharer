@@ -1,14 +1,16 @@
 #pragma once
 #include<iostream>
 #include<iomanip>
+#include<cstring>
 #include<string>
 #include<filesystem>
 #include<regex>
 
+//±ãÓÚÎÄ¼şÔÚÍøÂçÖĞ´«Êä£¬²»´øº¬ÓĞÖ¸ÕëµÄÀàstd::string
 struct SFile
 {
-	std::string FilePath;
-	std::string FileName;
+	char FilePath[256];
+	char FileName[256];
 	uintmax_t FileSize;
 	bool IsDir = false;
 	bool IsExist = false;
@@ -89,8 +91,8 @@ std::pair<SFile, bool> CFileManagement::findFile(std::string vFileName)//´ÓÄ¬ÈÏÄ
 		{
 			voFile.second = true;
 			voFile.first.IsExist = true;
-			voFile.first.FilePath = std::filesystem::absolute(p.path()).string();
-			voFile.first.FileName = vFileName;
+			strcpy_s(voFile.first.FilePath,std::filesystem::absolute(p.path()).string().c_str());
+			strcpy_s(voFile.first.FileName,vFileName.c_str());
 			voFile.first.FileSize = std::filesystem::file_size(voFile.first.FileName);
 			if (std::filesystem::is_directory(p.path()))
 				voFile.first.IsDir = true;
