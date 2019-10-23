@@ -1,12 +1,15 @@
 #include<iostream>
 #include<cstring>
 #include<filesystem>
+#include<thread>
+#include<future>
 #include <Ws2tcpip.h>
 #include<WinSock2.h>
 #pragma comment(lib,"Ws2_32.lib")
 
 #include"FileManagement.h"
 #include"Config.h"
+#include"QueryFlooding.h"
 constexpr auto BUF_SIZE = 128;
 
 //
@@ -45,25 +48,23 @@ constexpr auto BUF_SIZE = 128;
 //	return 0;
 //
 //}
+void initiazer(std::promise<int> &promiseObj) {
+	std::cout << "Inside thread: " << std::this_thread::get_id() << std::endl;
+	std::this_thread::sleep_for(std::chrono::seconds(1));
+	promiseObj.set_value(35);
+}
 
-int main()
-{
-	using namespace std;
-	CFileManagement test;
-	CConfig testConfig;
-	//cout << testConfig.checkIP("111.11.11.111") << endl;
-	cout << test.getCurrentPath() << endl;
-	//cout << test.createDir("miablackll")<<endl;
-	//cout << test.changeCurrentPath("Debug") << endl;
-	//cout << test.getCurrentPath() << endl;
-	test.listCurrenPathFileAndDir();
-	SFile b;
-	string a = "aaaavsabbbbbbbbbnnnnnnnnssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssaaaaaaaa";
-	//b.FileName = a;
-	vector<int> c;
-	cout << sizeof(c) << endl;
-	c.resize(40);
-	cout << sizeof SFile << endl;
-	cout << sizeof string << endl;
+int main() {
+	std::promise<int> promiseObj;
+	std::future<int> futureObj = promiseObj.get_future();
+	std::thread th(initiazer, std::ref(promiseObj));
+	//std::cout << "Aaaaa" << std::endl;
+
+	std::cout << futureObj.get() << std::endl;
+	
+	//std::future<int> futureObj2 = promiseObj.get_future();
+	//std::cout << futureObj2.get() << std::endl;
+	th.join();
 	system("pause");
+	return 0;
 }
