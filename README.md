@@ -1,5 +1,5 @@
 # Query-flooding-based-Resource-Sharer-CSnetworkProject-
-C++17  
+VS2017/C++17  
 Windows Socket  
 Google TEST(if have enough time)  
 
