@@ -3,6 +3,7 @@
 #include<cstring>
 #include<string>
 #include<future>
+#include<ctime>
 #include <Ws2tcpip.h>
 #include<WinSock2.h>
 #include"FileManagement.h"
@@ -15,7 +16,7 @@ constexpr int MAXPEERLENGTH = 64;
 constexpr int MAXFILENAME = 256;
 constexpr int MAXCOMMANDPACKET = 924;
 
-constexpr int FILLRESULTPACKET = 364;//ÈÃ²éÑ¯°üºÍ½á¹û°üµÈ´óÒÔ±ã½ÓÊÜ£¨ÓÐµã¶¾Áö£©
+constexpr int FILLRESULTPACKET = 372;//ÈÃ²éÑ¯°üºÍ½á¹û°üµÈ´ó£¬ÒÔ±ã½ÓÊÕ£¨ÓÐµã¶¾Áö£©
 constexpr int FILLQUERYPACKET = 4;
 enum PacketType { QueryPacket, ResultPacket };
 
@@ -27,6 +28,7 @@ struct SFileQueryPacket
 	int SenderDataPort;
 	int SenderCommandPort;
 	char FileName[MAXFILENAME];
+	time_t SendTime;
 	char EmptyBuffer[FILLQUERYPACKET];
 };
 
@@ -38,6 +40,7 @@ struct SFileResultPacket
 	int RecvCommandPort;
 	bool IsExistOnline;
 	SFile File;
+	time_t SendTime;
 	char EmptyBuffer[FILLRESULTPACKET];
 };
 
@@ -62,6 +65,7 @@ private:
 	WSADATA m_WSAData;
 	SOCKET m_ServerCommandSock;
 	std::string m_ResponsePeerID;
+	std::pair<std::string, time_t> m_LastRecvFile;//Çø·ÖÊÇ·ñÊÇÒ»´ÎÇëÇóÄÚµÄ¶àPEER·µ»Ø£¬Ö»½ÓÊÜµÚÒ»´Î
 
 	void __receiveQueryRequest(SFileQueryPacket& vQueryPacket);//²éµ½µ±Ç°PEERÓÐ¸ÃÎÄ¼þÔò·¢Éú·µ»ØÐÅÏ¢£¬Ã»ÓÐÔò¼ÌÐø×ª·¢
 	void __bandCommandSocket();
@@ -70,6 +74,7 @@ private:
 	void __sendQuery(SOCKET &vLoackSock, SFileQueryPacket& vFilePacket);
 	void __sendResult(SOCKET &vLoackSock, SFileResultPacket& vFilePacket);//Ïò²éÑ¯·½·µ»ØÐÅÏ¢
 	void __queryFileOnline(SFileQueryPacket& vFilePacket);
+	bool __checkPass(SFileQueryPacket vFilePacket, std::string vIP, int vPort);//¼ì²âÊÇ·ñÍù»ØÂ··¢
 
 };
 
@@ -113,14 +118,22 @@ void CQueryFlooding::receiveBuffer(std::promise<SFileResultPacket> &vSFileResult
 	{
 		char CommandBuffer[MAXCOMMANDPACKET];
 		recv(m_ServerCommandSock, CommandBuffer, MAXCOMMANDPACKET,0);
-		if (*reinterpret_cast<int*>(CommandBuffer) == QueryPacket)
+		auto PacketType = *reinterpret_cast<int*>(CommandBuffer);
+		if (PacketType == QueryPacket)
 		{
 			__receiveQueryRequest(*reinterpret_cast<SFileQueryPacket*>(CommandBuffer));
 		}
-		else if(*reinterpret_cast<int*>(CommandBuffer) == ResultPacket)
+		else if(PacketType == ResultPacket)
 		{
-			vSFileResultPacket.set_value_at_thread_exit(*reinterpret_cast<SFileResultPacket*>(CommandBuffer));
-			return;
+			auto ResultPacket = *reinterpret_cast<SFileResultPacket*>(CommandBuffer);
+			if (strcmp(ResultPacket.File.FileName, m_LastRecvFile.first.c_str()) && ResultPacket.SendTime == m_LastRecvFile.second);
+			else
+			{
+				m_LastRecvFile.first = ResultPacket.File.FileName;
+				m_LastRecvFile.second = ResultPacket.SendTime;
+				vSFileResultPacket.set_value_at_thread_exit(ResultPacket);
+				return;
+			}
 		}
 		else
 		{
@@ -144,6 +157,7 @@ void CQueryFlooding::__receiveQueryRequest(SFileQueryPacket& vQueryPacket)
 			strcpy_s(ResultPacket.RecvIP ,m_pPeerConfig->getIP().c_str());
 			ResultPacket.RecvCommandPort = m_pPeerConfig->getCommandPort();
 			ResultPacket.RecvDataPort = m_pPeerConfig->getDataPort();
+			ResultPacket.SendTime = vQueryPacket.SendTime;
 			__sendResult(LocalSock, ResultPacket);
 		}
 	}
@@ -162,6 +176,7 @@ void CQueryFlooding::requestQuery(std::string vFileName)
 	strcpy_s(FilePacket.SenderIP, m_pPeerConfig->getIP().c_str());
 	FilePacket.SenderCommandPort = m_pPeerConfig->getCommandPort();
 	FilePacket.SenderDataPort = m_pPeerConfig->getDataPort();
+	FilePacket.SendTime = time(NULL);
 	__queryFileOnline(FilePacket);
 }
 
@@ -195,17 +210,21 @@ void CQueryFlooding::__queryFlooding(SFileQueryPacket& vFilePacket)//fixme:ÉÐÎ´¼
 	auto ConnectPeerSocket = m_pPeerConfig->getConnectPeerSocket();
 	for (auto Peer : ConnectPeerSocket)
 	{
-		SOCKET LocalSock = socket(AF_INET, SOCK_STREAM, 0);
-		if (__connectPeer(LocalSock, std::any_cast<std::string>(Peer["IP"]), std::any_cast<int>(Peer["COMMANDPORT"])))
+		std::string DestinationIP = std::any_cast<std::string>(Peer["IP"]);
+		int DestinationPort = std::any_cast<int>(Peer["COMMANDPORT"]);
+		if (__checkPass(vFilePacket, DestinationIP, DestinationPort))
 		{
-			//vFilePacket.PassPeer[m_pPeerConfig->getSelfPeerID()] = std::make_pair(std::any_cast<std::string>(Peer["IP"]), std::any_cast<int>(Peer["COMMANDPORT"]));
-			__sendQuery(LocalSock, vFilePacket);
+			SOCKET LocalSock = socket(AF_INET, SOCK_STREAM, 0);
+			if (__connectPeer(LocalSock,DestinationIP, DestinationPort))
+			{
+				__sendQuery(LocalSock, vFilePacket);
+			}
+			else
+			{
+				std::cout << "Failed to connect " << DestinationIP << " " << DestinationPort << std::endl;
+			}
+			closesocket(LocalSock);
 		}
-		else
-		{
-			std::cout << "Failed to connect " << std::any_cast<std::string>(Peer["IP"]) << " " << std::any_cast<int>(Peer["COMMANDPORT"]) << std::endl;
-		}
-		closesocket(LocalSock);
 	}
 }
 
@@ -240,4 +259,11 @@ void CQueryFlooding::__sendQuery(SOCKET& vLoackSock, SFileQueryPacket& vFilePack
 void CQueryFlooding::__sendResult(SOCKET &vLoackSock, SFileResultPacket& vFilePacket)
 {
 	send(vLoackSock, reinterpret_cast<char*>(&vFilePacket), sizeof(vFilePacket), 0);
+}
+
+//*********************************************************************
+//FUNCTION:
+bool CQueryFlooding::__checkPass(SFileQueryPacket vFilePacket, std::string vIP, int vPort)
+{
+
 }

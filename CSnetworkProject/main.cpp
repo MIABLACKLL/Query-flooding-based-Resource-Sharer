@@ -12,8 +12,6 @@
 #include"QueryFlooding.h"
 constexpr auto BUF_SIZE = 128;
 
-//
-
 
 //int test()
 //{
@@ -50,21 +48,14 @@ constexpr auto BUF_SIZE = 128;
 //}
 void initiazer(std::promise<int> &promiseObj) {
 	std::cout << "Inside thread: " << std::this_thread::get_id() << std::endl;
-	std::this_thread::sleep_for(std::chrono::seconds(1));
+	//std::this_thread::sleep_for(std::chrono::seconds(1));
 	promiseObj.set_value(35);
 }
-
+using namespace std;
 int main() {
-	std::promise<int> promiseObj;
-	std::future<int> futureObj = promiseObj.get_future();
-	std::thread th(initiazer, std::ref(promiseObj));
-	//std::cout << "Aaaaa" << std::endl;
-
-	std::cout << futureObj.get() << std::endl;
 	
-	//std::future<int> futureObj2 = promiseObj.get_future();
-	//std::cout << futureObj2.get() << std::endl;
-	th.join();
+	cout <<sizeof SFileQueryPacket << endl;
+	cout << sizeof SFileResultPacket << endl;
 	system("pause");
 	return 0;
 }

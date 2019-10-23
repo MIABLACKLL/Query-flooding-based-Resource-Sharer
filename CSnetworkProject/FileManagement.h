@@ -6,11 +6,13 @@
 #include<filesystem>
 #include<regex>
 
+
+constexpr int MAXFILELEGTH = 256;
 //便于文件在网络中传输，不带含有指针的类std::string
 struct SFile
 {
-	char FilePath[256];
-	char FileName[256];
+	char FilePath[MAXFILELEGTH];
+	char FileName[MAXFILELEGTH];
 	uintmax_t FileSize;
 	bool IsDir = false;
 	bool IsExist = false;
