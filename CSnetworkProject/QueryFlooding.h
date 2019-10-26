@@ -12,6 +12,7 @@
 #pragma comment(lib,"Ws2_32.lib")
 constexpr int MAXLISTEN = 10;//×î´óPEERÊýÁ¿
 constexpr int MAXIPLENGTH = 16;
+constexpr int MAXPORTLENGTH = 4;
 constexpr int MAXPEERLENGTH = 64;
 constexpr int MAXFILENAME = 256;
 constexpr int MAXCOMMANDPACKET = 924;
@@ -74,8 +75,8 @@ private:
 	void __sendQuery(SOCKET &vLoackSock, SFileQueryPacket& vFilePacket);
 	void __sendResult(SOCKET &vLoackSock, SFileResultPacket& vFilePacket);//Ïò²éÑ¯·½·µ»ØÐÅÏ¢
 	void __queryFileOnline(SFileQueryPacket& vFilePacket);
-	bool __checkPass(SFileQueryPacket vFilePacket, std::string vIP, int vPort);//¼ì²âÊÇ·ñÍù»ØÂ··¢
-
+	bool __checkPass(SFileQueryPacket& vFilePacket, std::string vIP, int vPort);//¼ì²âÊÇ·ñÍù»ØÂ··¢
+	bool __addPass(SFileQueryPacket& vFilePacket, std::string vIP, int vPort);//Ìí¼Óµ½×ª·¢¾­¹ýµÄÂ·¾¶ÖÐ
 };
 
 CQueryFlooding::CQueryFlooding(CConfig* vConfig, CFileManagement* vFileManagement) :m_pPeerConfig(vConfig), m_pPeerFileSystem(vFileManagement)
@@ -177,6 +178,7 @@ void CQueryFlooding::requestQuery(std::string vFileName)
 	FilePacket.SenderCommandPort = m_pPeerConfig->getCommandPort();
 	FilePacket.SenderDataPort = m_pPeerConfig->getDataPort();
 	FilePacket.SendTime = time(NULL);
+	memset(FilePacket.PassPeer, 0, MAXLISTEN*MAXPEERLENGTH);
 	__queryFileOnline(FilePacket);
 }
 
@@ -218,6 +220,7 @@ void CQueryFlooding::__queryFlooding(SFileQueryPacket& vFilePacket)//fixme:ÉÐÎ´¼
 			if (__connectPeer(LocalSock,DestinationIP, DestinationPort))
 			{
 				__sendQuery(LocalSock, vFilePacket);
+				_ASSERTE(__addPass(vFilePacket, DestinationIP, DestinationPort));
 			}
 			else
 			{
@@ -263,7 +266,33 @@ void CQueryFlooding::__sendResult(SOCKET &vLoackSock, SFileResultPacket& vFilePa
 
 //*********************************************************************
 //FUNCTION:
-bool CQueryFlooding::__checkPass(SFileQueryPacket vFilePacket, std::string vIP, int vPort)
+bool CQueryFlooding::__checkPass(SFileQueryPacket& vFilePacket, std::string vIP, int vPort)//fixme:port×ª»»Ð´´íÁË
 {
+	int PassPeerNum = 0;
+	while (strlen(vFilePacket.PassPeer[PassPeerNum])>0)
+	{
+		char IP[MAXIPLENGTH];
+		char StrPort[MAXPORTLENGTH];
+		strncpy_s(IP, vFilePacket.PassPeer[PassPeerNum], MAXIPLENGTH);
+		strncpy_s(StrPort, &(vFilePacket.PassPeer[PassPeerNum][MAXIPLENGTH+1]), MAXPORTLENGTH);
+		int Port = *reinterpret_cast<int*>(StrPort);
+		if (strcmp(IP, vIP.c_str()) == 0 && vPort == Port)
+			return false;
+		PassPeerNum++;
+	}
+	return true;
+}
+bool CQueryFlooding::__addPass(SFileQueryPacket& vFilePacket, std::string vIP, int vPort)//fixme:port×ª»»Ð´´íÁË£¬ÏÈ¿´±ÈÈü£¬ÓÐ¿Õ¸Ä
+{
+	int PassPeerNum = 0;
+	while (strlen(vFilePacket.PassPeer[PassPeerNum]) > 0)
+	{
+		PassPeerNum++;
+	}
+	char StrPort[MAXPORTLENGTH];
+	strcpy_s(vFilePacket.PassPeer[PassPeerNum], vIP.c_str());
+	strcpy_s(&(vFilePacket.PassPeer[PassPeerNum][MAXIPLENGTH + 1]),MAXPORTLENGTH,itoa(vPort, StrPort));
+	return false;
+
 
 }

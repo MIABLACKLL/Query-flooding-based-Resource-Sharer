@@ -53,9 +53,17 @@ void initiazer(std::promise<int> &promiseObj) {
 }
 using namespace std;
 int main() {
-	
+	char a[10][30];
+	memset(a, 0, 10 * 10);
+	cout << strlen(a[5]) << endl;
 	cout <<sizeof SFileQueryPacket << endl;
 	cout << sizeof SFileResultPacket << endl;
+	string ip = "22.244.66.211";
+	strcpy_s(a[0], ip.c_str());
+	int vPort = 1000;
+	char StrPort[4];
+	a[1][0] = '1';
+
 	system("pause");
 	return 0;
 }
