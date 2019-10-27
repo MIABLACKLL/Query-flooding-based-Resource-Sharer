@@ -58,12 +58,18 @@ int main() {
 	cout << strlen(a[5]) << endl;
 	cout <<sizeof SFileQueryPacket << endl;
 	cout << sizeof SFileResultPacket << endl;
-	string ip = "22.244.66.211";
+	string ip = "222.244.662.211";
+	string test;
+	test.resize(20);
 	strcpy_s(a[0], ip.c_str());
 	int vPort = 1000;
-	char StrPort[4];
-	a[1][0] = '1';
+	char StrPort[6]="1000";
 
+	std::copy(ip.begin(), ip.end(), &(a[0][0]));
+	std::copy(&(a[0][0]), &(a[0][16]), test.begin());
+	_itoa_s(vPort, StrPort,10);
+	a[1][0] = '1';
+	cout << test << endl;
 	system("pause");
 	return 0;
 }

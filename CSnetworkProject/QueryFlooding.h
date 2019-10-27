@@ -4,6 +4,7 @@
 #include<string>
 #include<future>
 #include<ctime>
+#include<algorithm>
 #include <Ws2tcpip.h>
 #include<WinSock2.h>
 #include"FileManagement.h"
@@ -12,7 +13,7 @@
 #pragma comment(lib,"Ws2_32.lib")
 constexpr int MAXLISTEN = 10;//最大PEER数量
 constexpr int MAXIPLENGTH = 16;
-constexpr int MAXPORTLENGTH = 4;
+constexpr int MAXPORTLENGTH = 6;
 constexpr int MAXPEERLENGTH = 64;
 constexpr int MAXFILENAME = 256;
 constexpr int MAXCOMMANDPACKET = 924;
@@ -25,7 +26,7 @@ struct SFileQueryPacket
 {
 	int Type = QueryPacket;
 	char SenderIP[MAXIPLENGTH];
-	char PassPeer[MAXLISTEN][MAXPEERLENGTH];//记录传递过程中经过的PEER，前16字节IP，17-20字节命令端口，21字节往后记录PEERID（似乎有些浪费）
+	char PassPeer[MAXLISTEN][MAXPEERLENGTH];//记录传递过程中经过的PEER，前16字节IP，17-22字节命令端口，22字节往后记录PEERID（似乎有些浪费）
 	int SenderDataPort;
 	int SenderCommandPort;
 	char FileName[MAXFILENAME];
@@ -207,7 +208,7 @@ SFile CQueryFlooding::queryFileLocal(std::string vFileName)
 
 //*********************************************************************
 //FUNCTION:
-void CQueryFlooding::__queryFlooding(SFileQueryPacket& vFilePacket)//fixme:尚未检测包来的路径（会往回发），有空写
+void CQueryFlooding::__queryFlooding(SFileQueryPacket& vFilePacket)
 {
 	auto ConnectPeerSocket = m_pPeerConfig->getConnectPeerSocket();
 	for (auto Peer : ConnectPeerSocket)
@@ -266,23 +267,25 @@ void CQueryFlooding::__sendResult(SOCKET &vLoackSock, SFileResultPacket& vFilePa
 
 //*********************************************************************
 //FUNCTION:
-bool CQueryFlooding::__checkPass(SFileQueryPacket& vFilePacket, std::string vIP, int vPort)//fixme:port转换写错了
+bool CQueryFlooding::__checkPass(SFileQueryPacket& vFilePacket, std::string vIP, int vPort)
 {
 	int PassPeerNum = 0;
 	while (strlen(vFilePacket.PassPeer[PassPeerNum])>0)
 	{
-		char IP[MAXIPLENGTH];
-		char StrPort[MAXPORTLENGTH];
-		strncpy_s(IP, vFilePacket.PassPeer[PassPeerNum], MAXIPLENGTH);
-		strncpy_s(StrPort, &(vFilePacket.PassPeer[PassPeerNum][MAXIPLENGTH+1]), MAXPORTLENGTH);
-		int Port = *reinterpret_cast<int*>(StrPort);
-		if (strcmp(IP, vIP.c_str()) == 0 && vPort == Port)
+		std::string IP;
+		std::string StrPort;
+		IP.resize(MAXIPLENGTH);
+		StrPort.resize(MAXPORTLENGTH);
+		std::copy(vFilePacket.PassPeer[PassPeerNum], &(vFilePacket.PassPeer[PassPeerNum][MAXIPLENGTH]), IP.begin());
+		std::copy(&(vFilePacket.PassPeer[PassPeerNum][MAXIPLENGTH + 1]), &(vFilePacket.PassPeer[PassPeerNum][MAXIPLENGTH + MAXPORTLENGTH]), StrPort.begin());
+		int Port = atoi(StrPort.c_str());
+		if (IP == vIP && vPort == Port)
 			return false;
 		PassPeerNum++;
 	}
 	return true;
 }
-bool CQueryFlooding::__addPass(SFileQueryPacket& vFilePacket, std::string vIP, int vPort)//fixme:port转换写错了，先看比赛，有空改
+bool CQueryFlooding::__addPass(SFileQueryPacket& vFilePacket, std::string vIP, int vPort)
 {
 	int PassPeerNum = 0;
 	while (strlen(vFilePacket.PassPeer[PassPeerNum]) > 0)
@@ -290,9 +293,8 @@ bool CQueryFlooding::__addPass(SFileQueryPacket& vFilePacket, std::string vIP, i
 		PassPeerNum++;
 	}
 	char StrPort[MAXPORTLENGTH];
-	strcpy_s(vFilePacket.PassPeer[PassPeerNum], vIP.c_str());
-	strcpy_s(&(vFilePacket.PassPeer[PassPeerNum][MAXIPLENGTH + 1]),MAXPORTLENGTH,itoa(vPort, StrPort));
+	_itoa_s(vPort, StrPort, 10);
+	std::copy(vIP.begin(), vIP.end(), vFilePacket.PassPeer[PassPeerNum]);
+	std::copy(StrPort, StrPort + MAXPORTLENGTH, &(vFilePacket.PassPeer[PassPeerNum][MAXIPLENGTH + 1]));
 	return false;
-
-
 }
