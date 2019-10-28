@@ -6,7 +6,7 @@
 #include <Ws2tcpip.h>
 #include<WinSock2.h>
 #pragma comment(lib,"Ws2_32.lib")
-
+#include <chrono>
 #include"FileManagement.h"
 #include"Config.h"
 #include"QueryFlooding.h"
@@ -48,28 +48,25 @@ constexpr auto BUF_SIZE = 128;
 //}
 void initiazer(std::promise<int> &promiseObj) {
 	std::cout << "Inside thread: " << std::this_thread::get_id() << std::endl;
-	//std::this_thread::sleep_for(std::chrono::seconds(1));
-	promiseObj.set_value(35);
+	//std::this_thread::sleep_for(std::chrono::seconds(2));
+	promiseObj.set_value_at_thread_exit(35);
 }
 using namespace std;
 int main() {
-	char a[10][30];
-	memset(a, 0, 10 * 10);
-	cout << strlen(a[5]) << endl;
-	cout <<sizeof SFileQueryPacket << endl;
-	cout << sizeof SFileResultPacket << endl;
-	string ip = "222.244.662.211";
-	string test;
-	test.resize(20);
-	strcpy_s(a[0], ip.c_str());
-	int vPort = 1000;
-	char StrPort[6]="1000";
-
-	std::copy(ip.begin(), ip.end(), &(a[0][0]));
-	std::copy(&(a[0][0]), &(a[0][16]), test.begin());
-	_itoa_s(vPort, StrPort,10);
-	a[1][0] = '1';
-	cout << test << endl;
+	std::promise<int> promise;
+	std::future<int> prodResult = promise.get_future();
+	std::thread test(initiazer,std::ref(promise));
+	std::future_status status = prodResult.wait_for(std::chrono::seconds(1));
+	if (status == std::future_status::deferred) {
+		std::cout << "deferred\n";
+	}
+	else if (status == std::future_status::timeout) {
+		std::cout << "timeout\n";
+	}
+	else if (status == std::future_status::ready) {
+		std::cout << "ready!\n"<< prodResult.get();
+	}
+	test.join();
 	system("pause");
 	return 0;
 }
