@@ -40,7 +40,7 @@ private:
 	const std::string m_InvalidCharPattern = "[^\\?\"<>\\*\\|:\\.]+";
 
 	[[nodiscard]] bool __isOutRoot(std::string vPath);
-	[[nodiscard]] inline bool __isPathValid(std::string vPath) { return std::regex_match(vPath, std::regex(m_InvalidCharPattern)); }
+	[[nodiscard]] inline bool __isPathValid(std::string vPath) { return true; }//return std::regex_match(vPath, std::regex(m_InvalidCharPattern));
 	void __initPath();
 };
 

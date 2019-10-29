@@ -5,6 +5,7 @@
 #include<future>
 #include <Ws2tcpip.h>
 #include<WinSock2.h>
+#include<fstream>
 #pragma comment(lib,"Ws2_32.lib")
 #include <chrono>
 #include"FileManagement.h"
@@ -53,20 +54,13 @@ void initiazer(std::promise<int> &promiseObj) {
 }
 using namespace std;
 int main() {
-	std::promise<int> promise;
-	std::future<int> prodResult = promise.get_future();
-	std::thread test(initiazer,std::ref(promise));
-	std::future_status status = prodResult.wait_for(std::chrono::seconds(1));
-	if (status == std::future_status::deferred) {
-		std::cout << "deferred\n";
-	}
-	else if (status == std::future_status::timeout) {
-		std::cout << "timeout\n";
-	}
-	else if (status == std::future_status::ready) {
-		std::cout << "ready!\n"<< prodResult.get();
-	}
-	test.join();
+	CFileManagement test;
+	cout << test.getCurrentPath() << endl;
+	test.changeCurrentPath("Debug/CSnetwor.660FD822.tlog/");
+	cout << test.getCurrentPath() << endl;
+	ofstream aaa;
+	aaa.open("test.txt");
+	aaa.close();
 	system("pause");
 	return 0;
 }

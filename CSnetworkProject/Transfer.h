@@ -2,6 +2,7 @@
 #include<fstream>
 #include <Ws2tcpip.h>
 #include<WinSock2.h>
+#include<filesystem>
 #include"Config.h"
 #include"FileManagement.h"
 
@@ -14,19 +15,18 @@ constexpr int MAXLISTEN = 10;//最大PEER数量
 
 struct SFilePacket
 {
-	int FileSize;
-	int FileOffset;
 	int FileNum;
 	int CurrentFileNum;
 	bool FileEnd;
-	bool IsDir;
+	int FileOffset;
+	SFile File;
 	char FileSegement[MAXFILESEGEMENT];
-	char FileName[MAXFILELEGTH];
 };
 
 struct SRequestDownloadPacket
 {
 	char FileName[MAXFILELEGTH];
+	bool IsDir;
 };
 
 class CTransfer
@@ -131,8 +131,28 @@ void CTransfer::receiveDownloadRequest()
 //FUNCTION:
 void CTransfer::__receivFilePacket(SOCKET& vClientSock)
 {
+	std::string recvRootPath;
+	std::ofstream File;
 	while (true)
 	{
+		char FileBuffer[sizeof(SFilePacket)];
+		recv(vClientSock, FileBuffer, sizeof(SFilePacket), 0);
+		SFilePacket FilePacket = *reinterpret_cast<SFilePacket*>(FileBuffer);
+		if (FilePacket.CurrentFileNum == 1 && FilePacket.File.IsDir) { recvRootPath = FilePacket.File.FileName; }
 
+		if (!FilePacket.File.IsDir&&FilePacket.FileOffset == 0) { File.open(FilePacket.File.FileName, std::ios_base::app | std::ios_base::out | std::ios_base::binary); }
+		if (!FilePacket.File.IsDir)
+		{
+			File.write(FilePacket.FileSegement, (FilePacket.File.FileSize > MAXFILESEGEMENT) && (FilePacket.File.FileSize - FilePacket.FileOffset > MAXFILESEGEMENT)
+				? MAXFILESEGEMENT : FilePacket.File.FileSize - FilePacket.FileOffset);//Perfect!
+			File.seekp(std::ios_base::end);
+		}
+		if (!FilePacket.File.IsDir&&FilePacket.FileEnd) { File.close(); }
+
+		if (FilePacket.File.IsDir)
+		{
+
+		}
+		if (FilePacket.FileNum == FilePacket.CurrentFileNum&&FilePacket.FileEnd) { break; }
 	}
 }
