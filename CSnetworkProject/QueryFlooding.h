@@ -265,7 +265,7 @@ bool CQueryFlooding::__connectPeer(SOCKET &vLocalSock, std::string vIP, int vPor
 		NearPeerAddr.sin_family = AF_INET;
 		NearPeerAddr.sin_port = htons(vPort);
 		InetPton(AF_INET, vIP.c_str(), &NearPeerAddr.sin_addr);
-		SocketStatus = connect(vLocalSock, (sockaddr*)&NearPeerAddr, sizeof(NearPeerAddr));
+		SocketStatus = connect(vLocalSock, reinterpret_cast<sockaddr*>(&NearPeerAddr), sizeof(NearPeerAddr));
 		if (SocketStatus == SOCKET_ERROR) { return false; }
 		return true;
 	}
@@ -276,14 +276,18 @@ bool CQueryFlooding::__connectPeer(SOCKET &vLocalSock, std::string vIP, int vPor
 //FUNCTION:
 void CQueryFlooding::__sendQuery(SOCKET& vLoackSock, SQueryPacket& vFilePacket)
 {
-	send(vLoackSock, reinterpret_cast<char*>(&vFilePacket), sizeof(vFilePacket), 0);
+	char SendBuffer[sizeof(SQueryPacket)];
+	memcpy(SendBuffer, &vFilePacket, sizeof(SQueryPacket));
+	send(vLoackSock, SendBuffer, sizeof(SQueryPacket), 0);
 }
 
 //*********************************************************************
 //FUNCTION:
 void CQueryFlooding::__sendResult(SOCKET &vLoackSock, SResultPacket& vFilePacket)
 {
-	send(vLoackSock, reinterpret_cast<char*>(&vFilePacket), sizeof(vFilePacket), 0);
+	char SendBuffer[sizeof(SResultPacket)];
+	memcpy(SendBuffer, &vFilePacket, sizeof(SResultPacket));
+	send(vLoackSock, SendBuffer, sizeof(SResultPacket), 0);
 }
 
 //*********************************************************************

@@ -6,7 +6,6 @@
 #include"Config.h"
 #include"FileManagement.h"
 
-
 #pragma comment(lib,"Ws2_32.lib")
 
 constexpr int MAXFILELEGTH = 256;
@@ -102,10 +101,12 @@ bool CTransfer::sendDownloadRequest(SRequestDownloadPacket& vRequstDownloadPacke
 		DestinationAddr.sin_family = AF_INET;
 		DestinationAddr.sin_port = htons(vDestinationPort);
 		InetPton(AF_INET, vDestinationIP.c_str(), &DestinationAddr.sin_addr);
-		SocketStatus = connect(ClientSock, (sockaddr*)&DestinationAddr, sizeof(DestinationAddr));
+		SocketStatus = connect(ClientSock, reinterpret_cast<sockaddr*>(&DestinationAddr), sizeof(DestinationAddr));
 		if (SocketStatus == SOCKET_ERROR) { return false; }
 	}
-	send(ClientSock, reinterpret_cast<char*>(&vRequstDownloadPacket), sizeof(vRequstDownloadPacket), 0);
+	char SendBuffer[sizeof(SRequestDownloadPacket)];
+	memcpy(SendBuffer, &vRequstDownloadPacket, sizeof(SRequestDownloadPacket));
+	send(ClientSock, SendBuffer, sizeof(vRequstDownloadPacket), 0);
 	__receivFilePacket(ClientSock);
 	return true;
 }
@@ -129,18 +130,30 @@ void CTransfer::receiveDownloadRequest()
 
 //*********************************************************************
 //FUNCTION:
-void CTransfer::__receivFilePacket(SOCKET& vClientSock)
+void CTransfer::__receivFilePacket(SOCKET& vClientSock)//fixme:这个函数写的太多了，有空封装。
 {
-	std::string recvRootPath;
+	std::string recvRootPacketPath;
+	std::string shareRootPath = m_pPeerFileSystem->getSharePath();
 	std::ofstream File;
 	while (true)
 	{
 		char FileBuffer[sizeof(SFilePacket)];
 		recv(vClientSock, FileBuffer, sizeof(SFilePacket), 0);
 		SFilePacket FilePacket = *reinterpret_cast<SFilePacket*>(FileBuffer);
-		if (FilePacket.CurrentFileNum == 1 && FilePacket.File.IsDir) { recvRootPath = FilePacket.File.FileName; }
-
-		if (!FilePacket.File.IsDir&&FilePacket.FileOffset == 0) { File.open(FilePacket.File.FileName, std::ios_base::app | std::ios_base::out | std::ios_base::binary); }
+		if (FilePacket.FileEnd) { break; }
+		if (FilePacket.CurrentFileNum == 1 && FilePacket.File.IsDir) { recvRootPacketPath = FilePacket.File.FilePath; }
+		if (!FilePacket.File.IsDir&&FilePacket.FileOffset == 0) 
+		{
+			std::string FilePath;
+			if(recvRootPacketPath.empty())
+				FilePath = shareRootPath + "\\" + FilePacket.File.FileName;
+			else
+			{
+				std::string recvFilePath = FilePacket.File.FilePath;
+				FilePath = shareRootPath + recvFilePath.substr(recvRootPacketPath.size());
+			}
+			File.open(FilePath, std::ios_base::app | std::ios_base::out | std::ios_base::binary);
+		}
 		if (!FilePacket.File.IsDir)
 		{
 			File.write(FilePacket.FileSegement, (FilePacket.File.FileSize > MAXFILESEGEMENT) && (FilePacket.File.FileSize - FilePacket.FileOffset > MAXFILESEGEMENT)
@@ -148,11 +161,77 @@ void CTransfer::__receivFilePacket(SOCKET& vClientSock)
 			File.seekp(std::ios_base::end);
 		}
 		if (!FilePacket.File.IsDir&&FilePacket.FileEnd) { File.close(); }
-
 		if (FilePacket.File.IsDir)
 		{
-
+			std::string recvFilePath = FilePacket.File.FilePath;
+			std::string PacketPath = shareRootPath + recvFilePath.substr(recvRootPacketPath.size());
+			m_pPeerFileSystem->createDir(PacketPath);
 		}
-		if (FilePacket.FileNum == FilePacket.CurrentFileNum&&FilePacket.FileEnd) { break; }
+	}
+	closesocket(vClientSock);
+}
+
+//*********************************************************************
+//FUNCTION:
+void  CTransfer::__sendFilePacket(SOCKET& vServerSock, SRequestDownloadPacket& vRequestDownloadPacket)//fixme:这个函数写的太多了，有空封装。
+{
+	auto TargetFile = m_pPeerFileSystem->findFile(vRequestDownloadPacket.FileName);
+	if (TargetFile.second)
+	{
+		SFilePacket FilePacket;
+		std::ifstream File;
+		char SendBuffer[sizeof(SFilePacket)];
+		FilePacket.FileNum = 1;
+		FilePacket.CurrentFileNum = 1;
+		FilePacket.FileOffset = 0;
+		FilePacket.FileEnd = false;
+		FilePacket.File = TargetFile.first;
+		if (TargetFile.first.IsDir)
+		{
+			for (auto p : std::filesystem::recursive_directory_iterator(TargetFile.first.FilePath))
+				FilePacket.FileNum++;
+			memcpy(SendBuffer, &FilePacket, sizeof(SFilePacket));
+			send(vServerSock, SendBuffer, sizeof(SFilePacket), 0);
+		}
+		for (auto p : std::filesystem::recursive_directory_iterator(TargetFile.first.FilePath))
+		{
+			FilePacket.FileOffset = 0;
+			while (true)
+			{
+				if (p.is_directory())
+				{
+					FilePacket.File.IsDir = true;
+					strcpy_s(FilePacket.File.FilePath ,MAXFILELEGTH,p.path().string().c_str());
+					FilePacket.CurrentFileNum++;
+					memcpy(SendBuffer, &FilePacket, sizeof(SFilePacket));
+					send(vServerSock, SendBuffer, sizeof(SFilePacket), 0);
+					break;
+				}
+				else
+				{
+					int ReadSize = (p.file_size > MAXFILESEGEMENT) && (p.file_size - FilePacket.FileOffset > MAXFILESEGEMENT) ? MAXFILESEGEMENT : p.file_size - FilePacket.FileOffset;
+					if (FilePacket.FileOffset == 0)
+					{
+						File.open(p.path(), std::ios_base::binary | std::ios_base::in);
+						FilePacket.File.IsDir = false;
+						FilePacket.File.FileSize = p.file_size();
+						strcpy_s(FilePacket.File.FileName, MAXFILELEGTH, p.path().filename().string().c_str());
+						strcpy_s(FilePacket.File.FilePath, MAXFILELEGTH, p.path().string().c_str());
+					}
+					File.read(FilePacket.FileSegement, ReadSize);
+					memcpy(SendBuffer, &FilePacket, sizeof(SFilePacket));
+					send(vServerSock, SendBuffer, sizeof(SFilePacket), 0);
+					if (FilePacket.FileOffset + ReadSize < p.file_size())
+					{
+						FilePacket.FileOffset += ReadSize;
+						continue;
+					}
+					break;
+				}
+			}
+		}
+		FilePacket.FileEnd = true;
+		memcpy(SendBuffer, &FilePacket, sizeof(SFilePacket));
+		send(vServerSock, SendBuffer, sizeof(SFilePacket), 0);
 	}
 }

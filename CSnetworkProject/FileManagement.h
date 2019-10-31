@@ -25,6 +25,7 @@ public:
 	~CFileManagement() = default;
 
 	[[nodiscard]] inline std::string getCurrentPath() { return m_CurrentPath.string(); }
+	[[nodiscard]] inline std::string getSharePath() { return m_ShareFilePath.string(); }
 
 	[[nodiscard]] bool changeCurrentPath(std::string vPath);
 	[[nodiscard]] bool createDir(std::string vPath);
@@ -84,10 +85,10 @@ bool CFileManagement::setShareDir(std::string vPath)
 
 //*********************************************************************
 //FUNCTION:
-std::pair<SFile, bool> CFileManagement::findFile(std::string vFileName)//从默认目录share开始查找。fixme:暂时无法解决不同目录同名文件/文件夹的问题
+std::pair<SFile, bool> CFileManagement::findFile(std::string vFileName)//从根目录开始查找。fixme:暂时无法解决不同目录同名文件/文件夹的问题
 {
 	auto voFile = std::make_pair(SFile(), false);
-	for (auto p : std::filesystem::recursive_directory_iterator(m_ShareFilePath))
+	for (auto p : std::filesystem::recursive_directory_iterator(m_RootPath))
 	{
 		if (p.path().filename().string() == vFileName)
 		{
