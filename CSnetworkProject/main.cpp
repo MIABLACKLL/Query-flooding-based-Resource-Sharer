@@ -23,19 +23,28 @@ using namespace std;
 
 
 int main() {
-	ifstream test;
-	test.open("D:/C++programs/CSnetworkProject/CSnetworkProject/test.txt");
-	
-	char file[10];
-	file[9] = '\0';
-	while (test.read(file, 9))
-		cout << file << endl;
-	test.seekg(0, std::ios::end);
-	int length = test.tellg();
-	CFileManagement filem;
-	auto target = filem.findFile("test.txt");
-	cout << target.first.FileSize << endl;
-	cout << length << endl;
+	CConfig configtest;
+	if(configtest.loadConfigFile());
+	cout << configtest.getSelfPeerID() << endl;
+	cout << configtest.getIP() << endl;
+	cout << configtest.getDataPort() << endl;
+	cout << configtest.getCommandPort() << endl;
+	auto peersocket = configtest.getConnectPeerSocket();
+	for (auto p : peersocket)
+	{
+		for (auto m : p)
+		{
+			try 
+			{
+				any_cast<int>(m.second);
+				cout << m.first << ":" << any_cast<int>(m.second) << endl;
+			}
+			catch (...)
+			{
+				cout << m.first << ":" << any_cast<string>(m.second) << endl;
+			}
+		}
+	}
 	system("pause");
 	return 0;
 }

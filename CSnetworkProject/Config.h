@@ -24,8 +24,7 @@ public:
 
 	void setFilePath(const std::string vFilePath) { m_FilePath = vFilePath; }
 
-	[[nodiscard]] bool openConfigFile();
-	[[nodiscard]] bool readConfigFile();
+	[[nodiscard]] bool loadConfigFile();
 
 	[[nodiscard]] const std::string getIP();
 	[[nodiscard]] const std::string getSelfPeerID();
@@ -39,7 +38,7 @@ private:
 	std::string m_FilePath = "PeerConfig.ini";
 	std::ifstream m_FileIn;
 	std::string m_RecentName;
-	std::string m_ValidIpPattern = "((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9]\\.)";
+	std::string m_ValidIpPattern = "((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9]|[1-9][0-9]|[0-9]\\.)";
 
 	void __initConfigSet();
 
@@ -60,21 +59,16 @@ private:
 
 //*********************************************************************
 //FUNCTION:
-bool CConfig::openConfigFile()
+bool CConfig::loadConfigFile()
 {
 	if (m_FileIn.is_open()) { m_FileIn.close(); }
 	m_FileIn.open(m_FilePath);
-	if (m_FileIn) { return true; }
-	std::cout << "Fail to read config file.Program exit.";
-	system("pause");
-	exit(0);
-}
-
-//*********************************************************************
-//FUNCTION:
-bool CConfig::readConfigFile()
-{
-	if (!m_FileIn) { return false; }
+	if (!m_FileIn) 
+	{
+		std::cout << "Fail to read config file.Program exit.";
+		system("pause");
+		exit(0);
+	}
 	char StrLineBuffer[BufferSize];
 	std::string RecentName;
 	while (m_FileIn.getline(StrLineBuffer, BufferSize))
@@ -205,7 +199,7 @@ bool CConfig::__appendName(std::string vName)
 bool CConfig::__isKeyValuePair(std::string vStrLine)
 {
 	int EqualIndex = vStrLine.find('=');
-	if (EqualIndex != 0 && EqualIndex != vStrLine.size() - 1 && EqualIndex != vStrLine.npos&&vStrLine.find_first_not_of('=') == vStrLine.find_last_of('=')) { return true; }
+	if (EqualIndex != 0 && EqualIndex != vStrLine.size() - 1 && EqualIndex != vStrLine.npos&&vStrLine.find_first_of('=') == vStrLine.find_last_of('=')) {  return true; }
 	return false;
 }
 
@@ -241,14 +235,14 @@ std::vector<T> CConfig::__splitConnectPeer(std::string vStrConnectPeer)
 	int BeginIndex = 0, SpacingIndex = 0;
 	for (auto ch : vStrConnectPeer)
 	{
-		if (ch == ' ')
+		if (ch == ' ' || (SpacingIndex == vStrConnectPeer.size() - 1 && SpacingIndex++))
 		{
 			std::string StrPeer = vStrConnectPeer.substr(BeginIndex, SpacingIndex - BeginIndex);
 			if (!StrPeer.empty())
 			{
 				if (std::is_same<T, int>::value)
 				{
-					T voPort = std::any_cast<T>(stoi(m_ConfigSet["peer"]["COMMANDPORT"]));
+					T voPort = std::any_cast<T>(stoi(StrPeer));
 					if (__checkPort(std::any_cast<int>(voPort))) { voConnectPeerIDList.push_back(voPort); }
 					else
 					{
@@ -262,8 +256,7 @@ std::vector<T> CConfig::__splitConnectPeer(std::string vStrConnectPeer)
 			}
 			BeginIndex = SpacingIndex+1;
 		}
-		else
-			SpacingIndex++;
+		SpacingIndex++;
 	}
 	return voConnectPeerIDList;
 }
