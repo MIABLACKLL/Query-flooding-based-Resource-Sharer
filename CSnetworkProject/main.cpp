@@ -51,13 +51,17 @@ int main() {
 	std::promise<SResultPacket> promise;
 	std::future<SResultPacket> future = promise.get_future();
 	std::thread t1(&CQueryFlooding::receiveBuffer,&test1, std::ref(promise));
-
-	test1.requestQuery("aaaa.txt");
+	std::thread t2(&CTransfer::receiveDownloadRequest, &transfer);
+	test1.requestQuery("test");
 	SResultPacket result = future.get();
 	t1.join();
 	std::cout << sizeof SQueryPacket << " " << sizeof SResultPacket << std::endl;
 	std::cout << result.File.FilePath << std::endl;
 	std::cout << result.RecvIP << std::endl;
+	SRequestDownloadPacket rp;
+	strcpy_s(rp.FileName,result.File.FileName);
+	rp.IsDir = result.File.IsDir;
+	transfer.sendDownloadRequest(rp, result.RecvIP, result.RecvDataPort);
 	system("pause");
 	return 0;
 }

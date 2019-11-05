@@ -93,13 +93,11 @@ std::pair<SFile, bool> CFileManagement::findFile(std::string vFileName)//´Ó¸ùÄ¿Â
 	{
 		if (p.path().filename().string() == vFileName)
 		{
-			std::cout << p.path().string() << std::endl;
 			voFile.second = true;
 			voFile.first.IsExist = true;
 			strcpy_s(voFile.first.FilePath,p.path().string().c_str());
 			strcpy_s(voFile.first.FileName,vFileName.c_str());
 			voFile.first.FileSize = std::filesystem::file_size(voFile.first.FilePath);
-			std::cout << p.path().string() << std::endl;
 			if (std::filesystem::is_directory(p.path()))
 				voFile.first.IsDir = true;
 			return voFile;
