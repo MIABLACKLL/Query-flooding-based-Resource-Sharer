@@ -8,7 +8,6 @@ Google TEST(if have enough time)
 3.QueryFlooding.h 实现洪泛查询  
 4.Transfer.h 传输文件/文件夹  
 5.SystemCUI 用户CUI界面  
-    //有空再细写readme
     
-### SCU 2019  
+## SCU 2019  
 ### Teacher:LinFeng Course:ComputerNetwork 
