@@ -70,7 +70,7 @@ private:
 
 	void __receiveQueryRequest(SQueryPacket& vQueryPacket);//查到当前PEER有该文件则发生返回信息，没有则继续转发
 	bool __acceptClient(SOCKET& vClientSocket ,sockaddr_in& vClientAddr);
-	void __bandCommandSocket();
+	void __bindCommandSocket();
 	void __queryFlooding(SQueryPacket& vFilePacket);
 	bool __connectPeer(SOCKET &vLocalSock,std::string vIP,int vPort);
 	void __sendQuery(SOCKET &vLoackSock, SQueryPacket& vFilePacket);
@@ -84,19 +84,20 @@ CQueryFlooding::CQueryFlooding(CConfig* vConfig, CFileManagement* vFileManagemen
 {
 	WSAStartup(MAKEWORD(2, 2), &m_WSAData);
 	m_ServerCommandSock = socket(AF_INET, SOCK_STREAM, 0);
-	__bandCommandSocket();
+	__bindCommandSocket();
 }
 
 //*********************************************************************
 //FUNCTION:
-void CQueryFlooding::__bandCommandSocket()
+void CQueryFlooding::__bindCommandSocket()
 {
 	sockaddr_in SockAddr;
 	memset(&SockAddr, 0, sizeof(SockAddr));
 	SockAddr.sin_family = AF_INET;
 	InetPton(AF_INET, m_pPeerConfig->getIP().c_str(), &SockAddr.sin_addr);
 	SockAddr.sin_port = htons(m_pPeerConfig->getCommandPort());
-	bind(m_ServerCommandSock, reinterpret_cast<sockaddr*>(&SockAddr), sizeof(SockAddr));
+	int result = bind(m_ServerCommandSock, reinterpret_cast<sockaddr*>(&SockAddr), sizeof(SockAddr));
+	std::cout << result << std::endl;
 }
 
 //*********************************************************************
@@ -123,15 +124,18 @@ void CQueryFlooding::receiveBuffer(std::promise<SResultPacket> &vSResultPacket)
 		sockaddr_in ClientAddr;
 		if (__acceptClient(ClientSocket, ClientAddr))
 		{
+			std::cout << "success" << std::endl;
 			recv(ClientSocket, CommandBuffer, MAXCOMMANDPACKET, 0);
 			closesocket(ClientSocket);
 			auto PacketType = *reinterpret_cast<int*>(CommandBuffer);
 			if (PacketType == QueryPacket)
 			{
+				std::cout << "success QueryPacket" << std::endl;
 				__receiveQueryRequest(*reinterpret_cast<SQueryPacket*>(CommandBuffer));
 			}
 			else if (PacketType == ResultPacket)
 			{
+				std::cout << "success ResultPacket" << std::endl;
 				auto ResultPacket = *reinterpret_cast<SResultPacket*>(CommandBuffer);
 				if (strcmp(ResultPacket.File.FileName, m_LastRecvFile.first.c_str()) && ResultPacket.SendTime == m_LastRecvFile.second);
 				else
@@ -168,6 +172,7 @@ bool CQueryFlooding::__acceptClient(SOCKET& vClientSocket, sockaddr_in& vClientA
 //FUNCTION:
 void CQueryFlooding::__receiveQueryRequest(SQueryPacket& vQueryPacket)
 {
+	std::cout << vQueryPacket.FileName << std::endl;
 	auto File = queryFileLocal(vQueryPacket.FileName);
 	if (File.IsExist)
 	{
@@ -258,6 +263,7 @@ void CQueryFlooding::__queryFlooding(SQueryPacket& vFilePacket)
 bool CQueryFlooding::__connectPeer(SOCKET &vLocalSock, std::string vIP, int vPort)
 {
 	int SocketStatus = SOCKET_ERROR;
+	std::cout << vIP << std::endl;
 	if (vLocalSock != SOCKET_ERROR)
 	{
 		sockaddr_in NearPeerAddr;
@@ -321,5 +327,5 @@ bool CQueryFlooding::__addPass(SQueryPacket& vFilePacket, std::string vIP, int v
 	_itoa_s(vPort, StrPort, 10);
 	std::copy(vIP.begin(), vIP.end(), vFilePacket.PassPeer[PassPeerNum]);
 	std::copy(StrPort, StrPort + MAXPORTLENGTH, &(vFilePacket.PassPeer[PassPeerNum][MAXIPLENGTH + 1]));
-	return false;
+	return true;
 }

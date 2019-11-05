@@ -8,9 +8,11 @@
 
 #pragma comment(lib,"Ws2_32.lib")
 
-constexpr int MAXFILELEGTH = 256;
+
+constexpr int MAXTRANSFERFILELEGTH = 256;
 constexpr int MAXFILESEGEMENT = 1024;
-constexpr int MAXLISTEN = 10;//×î´óPEERÊýÁ¿
+constexpr int MAXLISTENPEER = 10;//×î´óPEERÊýÁ¿
+
 
 struct SFilePacket
 {
@@ -24,7 +26,7 @@ struct SFilePacket
 
 struct SRequestDownloadPacket
 {
-	char FileName[MAXFILELEGTH];
+	char FileName[MAXTRANSFERFILELEGTH];
 	bool IsDir;
 };
 
@@ -46,7 +48,7 @@ private:
 	SOCKET m_ServerDataSock;
 	std::string m_ResponsePeerID;
 
-	void __bandCommandSocket();
+	void __bindCommandSocket();
 	void __receivFilePacket(SOCKET& vClientSock);
 	void __sendFilePacket(SOCKET& vServerSock, SRequestDownloadPacket& vRequestDownloadPacket);
 	void __makeFilePacket();
@@ -60,12 +62,12 @@ CTransfer::CTransfer(CConfig* vConfig, CFileManagement* vFileManagement) :m_pPee
 {
 	WSAStartup(MAKEWORD(2, 2), &m_WSAData);
 	m_ServerDataSock = socket(AF_INET, SOCK_STREAM, 0);
-	__bandCommandSocket();
+	__bindCommandSocket();
 }
 
 //*********************************************************************
 //FUNCTION:
-void CTransfer::__bandCommandSocket()
+void CTransfer::__bindCommandSocket()
 {
 	sockaddr_in SockAddr;
 	memset(&SockAddr, 0, sizeof(SockAddr));
@@ -82,7 +84,7 @@ bool CTransfer::listenDataPort()
 	int SocketStatus = SOCKET_ERROR;
 	if (m_ServerDataSock != SOCKET_ERROR)
 	{
-		SocketStatus = listen(m_ServerDataSock, MAXLISTEN);//Éè¶¨½ÓÊÜÁ¬½ÓµÄÌ×½Ó×Ö£¬ÒÔ¼°Éè¶¨Á¬½Ó¶ÓÁÐ³¤¶È;
+		SocketStatus = listen(m_ServerDataSock, MAXLISTENPEER);//Éè¶¨½ÓÊÜÁ¬½ÓµÄÌ×½Ó×Ö£¬ÒÔ¼°Éè¶¨Á¬½Ó¶ÓÁÐ³¤¶È;
 	}
 	if (SocketStatus == SOCKET_ERROR) { return false; }
 	return true;
@@ -108,6 +110,7 @@ bool CTransfer::sendDownloadRequest(SRequestDownloadPacket& vRequstDownloadPacke
 	memcpy(SendBuffer, &vRequstDownloadPacket, sizeof(SRequestDownloadPacket));
 	send(ClientSock, SendBuffer, sizeof(vRequstDownloadPacket), 0);
 	__receivFilePacket(ClientSock);
+	closesocket(ClientSock);
 	return true;
 }
 
@@ -168,7 +171,6 @@ void CTransfer::__receivFilePacket(SOCKET& vClientSock)//fixme:Õâ¸öº¯ÊýÐ´µÄÌ«¶àÁ
 			m_pPeerFileSystem->createDir(PacketPath);
 		}
 	}
-	closesocket(vClientSock);
 }
 
 //*********************************************************************
@@ -201,7 +203,7 @@ void  CTransfer::__sendFilePacket(SOCKET& vServerSock, SRequestDownloadPacket& v
 				if (p.is_directory())
 				{
 					FilePacket.File.IsDir = true;
-					strcpy_s(FilePacket.File.FilePath ,MAXFILELEGTH,p.path().string().c_str());
+					strcpy_s(FilePacket.File.FilePath ,MAXTRANSFERFILELEGTH,p.path().string().c_str());
 					FilePacket.CurrentFileNum++;
 					memcpy(SendBuffer, &FilePacket, sizeof(SFilePacket));
 					send(vServerSock, SendBuffer, sizeof(SFilePacket), 0);
@@ -209,14 +211,14 @@ void  CTransfer::__sendFilePacket(SOCKET& vServerSock, SRequestDownloadPacket& v
 				}
 				else
 				{
-					int ReadSize = (p.file_size > MAXFILESEGEMENT) && (p.file_size - FilePacket.FileOffset > MAXFILESEGEMENT) ? MAXFILESEGEMENT : p.file_size - FilePacket.FileOffset;
+					int ReadSize = (p.file_size() > MAXFILESEGEMENT) && (p.file_size() - FilePacket.FileOffset > MAXFILESEGEMENT) ? MAXFILESEGEMENT : p.file_size() - FilePacket.FileOffset;
 					if (FilePacket.FileOffset == 0)
 					{
 						File.open(p.path(), std::ios_base::binary | std::ios_base::in);
 						FilePacket.File.IsDir = false;
 						FilePacket.File.FileSize = p.file_size();
-						strcpy_s(FilePacket.File.FileName, MAXFILELEGTH, p.path().filename().string().c_str());
-						strcpy_s(FilePacket.File.FilePath, MAXFILELEGTH, p.path().string().c_str());
+						strcpy_s(FilePacket.File.FileName, MAXTRANSFERFILELEGTH, p.path().filename().string().c_str());
+						strcpy_s(FilePacket.File.FilePath, MAXTRANSFERFILELEGTH, p.path().string().c_str());
 					}
 					File.read(FilePacket.FileSegement, ReadSize);
 					memcpy(SendBuffer, &FilePacket, sizeof(SFilePacket));

@@ -1,3 +1,4 @@
+#pragma once
 #include<iostream>
 #include<cstring>
 #include<filesystem>
@@ -11,40 +12,52 @@
 #include"FileManagement.h"
 #include"Config.h"
 #include"QueryFlooding.h"
+#include"Transfer.h"
 constexpr auto BUF_SIZE = 128;
+
+#include <Ws2tcpip.h>
+#include<WinSock2.h>
+#pragma comment(lib,"Ws2_32.lib")
 
 void initiazer(std::promise<int> &promiseObj) {
 	std::cout << "Inside thread: " << std::this_thread::get_id() << std::endl;
 	//std::this_thread::sleep_for(std::chrono::seconds(2));
 	promiseObj.set_value_at_thread_exit(35);
 }
-using namespace std;
 
+void recv()
+{
 
+}
 
 int main() {
-	CConfig configtest;
-	if(configtest.loadConfigFile());
-	cout << configtest.getSelfPeerID() << endl;
-	cout << configtest.getIP() << endl;
-	cout << configtest.getDataPort() << endl;
-	cout << configtest.getCommandPort() << endl;
-	auto peersocket = configtest.getConnectPeerSocket();
-	for (auto p : peersocket)
-	{
-		for (auto m : p)
-		{
-			try 
-			{
-				any_cast<int>(m.second);
-				cout << m.first << ":" << any_cast<int>(m.second) << endl;
-			}
-			catch (...)
-			{
-				cout << m.first << ":" << any_cast<string>(m.second) << endl;
-			}
-		}
-	}
+	CConfig config;
+
+	config.loadConfigFile();
+
+	CFileManagement filem;
+
+	std::cout << config.getSelfPeerID() << std::endl;
+	std::cout << config.getIP() << std::endl;
+	std::cout << config.getDataPort() << std::endl;
+	std::cout << config.getCommandPort() << std::endl;
+
+	CQueryFlooding test1(&config,&filem);
+	CTransfer transfer(&config, &filem);
+
+
+	std::cout << test1.listenCommandPort() << std::endl;
+	std::cout << transfer.listenDataPort() << std::endl;
+	std::promise<SResultPacket> promise;
+	std::future<SResultPacket> future = promise.get_future();
+	std::thread t1(&CQueryFlooding::receiveBuffer,&test1, std::ref(promise));
+
+	test1.requestQuery("aaaa.txt");
+	SResultPacket result = future.get();
+	t1.join();
+	std::cout << sizeof SQueryPacket << " " << sizeof SResultPacket << std::endl;
+	std::cout << result.File.FilePath << std::endl;
+	std::cout << result.RecvIP << std::endl;
 	system("pause");
 	return 0;
 }

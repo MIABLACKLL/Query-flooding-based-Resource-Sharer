@@ -88,15 +88,18 @@ bool CFileManagement::setShareDir(std::string vPath)
 std::pair<SFile, bool> CFileManagement::findFile(std::string vFileName)//从根目录开始查找。fixme:暂时无法解决不同目录同名文件/文件夹的问题
 {
 	auto voFile = std::make_pair(SFile(), false);
+	std::cout << vFileName << std::endl;
 	for (auto p : std::filesystem::recursive_directory_iterator(m_RootPath))
 	{
 		if (p.path().filename().string() == vFileName)
 		{
+			std::cout << p.path().string() << std::endl;
 			voFile.second = true;
 			voFile.first.IsExist = true;
-			strcpy_s(voFile.first.FilePath,std::filesystem::absolute(p.path()).string().c_str());
+			strcpy_s(voFile.first.FilePath,p.path().string().c_str());
 			strcpy_s(voFile.first.FileName,vFileName.c_str());
-			voFile.first.FileSize = std::filesystem::file_size(voFile.first.FileName);
+			voFile.first.FileSize = std::filesystem::file_size(voFile.first.FilePath);
+			std::cout << p.path().string() << std::endl;
 			if (std::filesystem::is_directory(p.path()))
 				voFile.first.IsDir = true;
 			return voFile;
