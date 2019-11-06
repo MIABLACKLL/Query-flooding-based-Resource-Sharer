@@ -93,19 +93,33 @@ void CSystemCUI::__processInput()//if else实现选择- -不忍直视
 		}
 		else if (InputCommand.substr(0, 4) == "find")
 		{
-			auto ResultFile = m_pFileManagement->findFile(InputCommand.substr(5));
-			if (ResultFile.second)
+			if (InputCommand.size() <= 5)
 			{
-				std::cout << "Find " << ResultFile.first.FileName << " in local path: " << ResultFile.first.FilePath << std::endl;
+				std::cout << "You must enter the file name.find [filename]" << std::endl;
 			}
 			else
 			{
-				std::cout << "Failed: " << ResultFile.first.FileName << " not in  local system." << std::endl;
+				auto ResultFile = m_pFileManagement->findFile(InputCommand.substr(5));
+				if (ResultFile.second)
+				{
+					std::cout << "Find " << ResultFile.first.FileName << " in local path: " << ResultFile.first.FilePath << std::endl;
+				}
+				else
+				{
+					std::cout << "Failed: " << ResultFile.first.FileName << " not in  local system." << std::endl;
+				}
 			}
 		}
-		else if (InputCommand.substr(0,11) == "queryonline")
+		else if (InputCommand.substr(0, 11) == "queryonline")
 		{
-			__queryOnline(InputCommand.substr(12));
+			if (InputCommand.size() <= 12)
+			{
+				std::cout << "You must enter the file name.find [filename]" << std::endl;
+			}
+			else
+			{
+				__queryOnline(InputCommand.substr(12));
+			}
 		}
 		else if (InputCommand == "exit")
 		{
@@ -127,7 +141,6 @@ void CSystemCUI::__processInput()//if else实现选择- -不忍直视
 			std::cout << "\"" << InputCommand << "\"" << " is not an internal or external command," << std::endl << " nor is it a runnable program or batch files." << std::endl;
 		}
 		std::cout << std::endl;
-		std::cin.clear();
 	}
 }
 
@@ -151,7 +164,7 @@ void CSystemCUI::__queryOnline(std::string vFile)
 	}
 	if (QueryResult.IsExistOnline)
 	{
-		std::cout << "Find " << QueryResult.File.FileName << " online." << std::endl;
+		std::cout << "Find file \"" << QueryResult.File.FileName << "\" online." << std::endl;
 		std::cout << "From Source Peer: " << std::endl << "IP: " << QueryResult.RecvIP << std::endl << "Command Port: " << QueryResult.RecvCommandPort
 			<< std::endl << "Data Port: " << QueryResult.RecvDataPort << std::endl;
 		std::cout << "Download this file(" << QueryResult.File.FileSize << "Bytes)?(Y/N)";
@@ -162,6 +175,7 @@ void CSystemCUI::__queryOnline(std::string vFile)
 			SRequestDownloadPacket RequestDownloadPacket;
 			strcpy_s(RequestDownloadPacket.FileName, QueryResult.File.FileName);
 			RequestDownloadPacket.IsDir = QueryResult.File.IsDir;
+			std::cout << "Download Begin..."<<std::endl;
 			m_pTransfer->sendDownloadRequest(RequestDownloadPacket, QueryResult.RecvIP, QueryResult.RecvDataPort);
 			std::cout << "Download completed! Download in " << m_pFileManagement->getSharePath() << std::endl;
 		}
@@ -169,7 +183,7 @@ void CSystemCUI::__queryOnline(std::string vFile)
 		{
 			std::cout << "Cancel download or error command." << std::endl;
 		}
+		std::cin.clear();
+		std::cin.ignore();
 	}
-
-
 }

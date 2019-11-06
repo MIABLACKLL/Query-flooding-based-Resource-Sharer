@@ -132,7 +132,6 @@ void CQueryFlooding::receiveBuffer(std::promise<SResultPacket> &vSResultPacket)
 			}
 			else if (PacketType == ResultPacket)
 			{
-				std::cout << "success ResultPacket" << std::endl;
 				auto ResultPacket = *reinterpret_cast<SResultPacket*>(CommandBuffer);
 				if (strcmp(ResultPacket.File.FileName, m_LastRecvFile.first.c_str()) && ResultPacket.SendTime == m_LastRecvFile.second);
 				else
@@ -226,21 +225,22 @@ SFile CQueryFlooding::__queryFileLocal(std::string vFileName)
 void CQueryFlooding::__queryFlooding(SQueryPacket& vFilePacket)
 {
 	auto ConnectPeerSocket = m_pPeerConfig->getConnectPeerSocket();
+	__addPass(vFilePacket, m_pPeerConfig->getIP(), m_pPeerConfig->getCommandPort());
 	for (auto Peer : ConnectPeerSocket)
 	{
 		std::string DestinationIP = std::any_cast<std::string>(Peer["IP"]);
 		int DestinationPort = std::any_cast<int>(Peer["COMMANDPORT"]);
 		if (__checkPass(vFilePacket, DestinationIP, DestinationPort))
 		{
+			std::cout <<"Send to:"<< DestinationIP << " " << DestinationPort << std::endl;
 			SOCKET LocalSock = socket(AF_INET, SOCK_STREAM, 0);
 			if (__connectPeer(LocalSock,DestinationIP, DestinationPort))
 			{
 				__sendQuery(LocalSock, vFilePacket);
-				_ASSERTE(__addPass(vFilePacket, DestinationIP, DestinationPort));
 			}
 			else
 			{
-				std::cout << "Failed to connect " << DestinationIP << " " << DestinationPort << std::endl;
+				std::cout << "Failed to connect neighbor peer which IP:" << DestinationIP << " Command Port:" << DestinationPort << std::endl;
 			}
 			closesocket(LocalSock);
 		}
@@ -298,6 +298,7 @@ bool CQueryFlooding::__checkPass(SQueryPacket& vFilePacket, std::string vIP, int
 		std::copy(vFilePacket.PassPeer[PassPeerNum], &(vFilePacket.PassPeer[PassPeerNum][MAXIPLENGTH]), IP.begin());
 		std::copy(&(vFilePacket.PassPeer[PassPeerNum][MAXIPLENGTH + 1]), &(vFilePacket.PassPeer[PassPeerNum][MAXIPLENGTH + MAXPORTLENGTH]), StrPort.begin());
 		int Port = atoi(StrPort.c_str());
+		IP.resize(IP.find_first_of('\0'));
 		if (IP == vIP && vPort == Port)
 			return false;
 		PassPeerNum++;

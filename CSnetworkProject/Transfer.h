@@ -138,6 +138,7 @@ void CTransfer::__receivFilePacket(SOCKET& vClientSock)//fixme:Õâ¸öº¯ÊýÐ´µÄÌ«¶àÁ
 	std::string recvRootPacketPath;
 	std::string shareRootPath = m_pPeerFileSystem->getSharePath();
 	std::ofstream File;
+	int SourceRootPathSize = 0;
 	while (true)
 	{
 		char FileBuffer[sizeof(SFilePacket)];
@@ -147,7 +148,9 @@ void CTransfer::__receivFilePacket(SOCKET& vClientSock)//fixme:Õâ¸öº¯ÊýÐ´µÄÌ«¶àÁ
 		if (FilePacket.CurrentFileNum == 1 && FilePacket.File.IsDir) 
 		{ 
 			recvRootPacketPath = FilePacket.File.FilePath; 
-			recvRootPacketPath = recvRootPacketPath.substr(0, recvRootPacketPath.rfind('\\'));
+			SourceRootPathSize = recvRootPacketPath.rfind("\\");
+			recvRootPacketPath = shareRootPath + recvRootPacketPath.substr(recvRootPacketPath.rfind("\\"));
+			std::cout << "Create folder:" << recvRootPacketPath << std::endl;
 			m_pPeerFileSystem->createDir(recvRootPacketPath);
 			continue;
 		}
@@ -159,10 +162,11 @@ void CTransfer::__receivFilePacket(SOCKET& vClientSock)//fixme:Õâ¸öº¯ÊýÐ´µÄÌ«¶àÁ
 			else
 			{
 				std::string recvFilePath = FilePacket.File.FilePath;
-				FilePath = shareRootPath + recvFilePath.substr(recvRootPacketPath.size());
+				FilePath = shareRootPath + recvFilePath.substr(SourceRootPathSize);
 			}
 			if (File.is_open()) { File.close(); }
 			File.open(FilePath, std::ios_base::app | std::ios_base::out | std::ios_base::binary);
+			std::cout << "Receive file:" << FilePath << std::endl;
 		}
 		if (!FilePacket.File.IsDir)
 		{
@@ -174,7 +178,8 @@ void CTransfer::__receivFilePacket(SOCKET& vClientSock)//fixme:Õâ¸öº¯ÊýÐ´µÄÌ«¶àÁ
 		if (FilePacket.File.IsDir)
 		{
 			std::string recvFilePath = FilePacket.File.FilePath;
-			std::string PacketPath = shareRootPath + recvFilePath.substr(recvRootPacketPath.size());
+			std::string PacketPath = shareRootPath + recvFilePath.substr(SourceRootPathSize);
+			std::cout << "Create folder:"<<PacketPath << std::endl;
 			m_pPeerFileSystem->createDir(PacketPath);
 		}
 	}
