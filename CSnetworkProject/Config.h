@@ -81,6 +81,7 @@ bool CConfig::loadConfigFile()
 		}
 		else if (__isKeyValuePair(StrLine)) { __appendKeyValue(__splitKeyValue(StrLine)); }
 	}
+	std::cout << "# Loading PeerConfig.ini successful" << std::endl;
 	return true;
 }
 

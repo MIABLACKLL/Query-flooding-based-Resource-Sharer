@@ -55,7 +55,6 @@ public:
 	~CQueryFlooding() { closesocket(m_ServerCommandSock); WSACleanup(); }
 
 	[[nodiscard]]bool listenCommandPort();
-	[[nodiscard]] SFile queryFileLocal(std::string vFileName);//收到远端查询请求时，先在本地进行查询，找不到继续发起洪泛。
 
 	void receiveBuffer(std::promise<SResultPacket> &vSResultPacket);//先对接受到的包判断（两种类型），然后再调用不同处理方式
 																		//收到查询请求时，交给下层处理。收到查询结果时，返回，主进程需要再次调用。
@@ -68,6 +67,7 @@ private:
 	std::string m_ResponsePeerID;
 	std::pair<std::string, time_t> m_LastRecvFile;//区分是否是一次请求内的多PEER返回，只接受第一次
 
+	[[nodiscard]] SFile __queryFileLocal(std::string vFileName);//收到远端查询请求时，先在本地进行查询，找不到继续发起洪泛。
 	void __receiveQueryRequest(SQueryPacket& vQueryPacket);//查到当前PEER有该文件则发生返回信息，没有则继续转发
 	bool __acceptClient(SOCKET& vClientSocket ,sockaddr_in& vClientAddr);
 	void __bindCommandSocket();
@@ -97,7 +97,6 @@ void CQueryFlooding::__bindCommandSocket()
 	InetPton(AF_INET, m_pPeerConfig->getIP().c_str(), &SockAddr.sin_addr);
 	SockAddr.sin_port = htons(m_pPeerConfig->getCommandPort());
 	int result = bind(m_ServerCommandSock, reinterpret_cast<sockaddr*>(&SockAddr), sizeof(SockAddr));
-	std::cout << result << std::endl;
 }
 
 //*********************************************************************
@@ -124,13 +123,11 @@ void CQueryFlooding::receiveBuffer(std::promise<SResultPacket> &vSResultPacket)
 		sockaddr_in ClientAddr;
 		if (__acceptClient(ClientSocket, ClientAddr))
 		{
-			std::cout << "success" << std::endl;
 			recv(ClientSocket, CommandBuffer, MAXCOMMANDPACKET, 0);
 			closesocket(ClientSocket);
 			auto PacketType = *reinterpret_cast<int*>(CommandBuffer);
 			if (PacketType == QueryPacket)
 			{
-				std::cout << "success QueryPacket" << std::endl;
 				__receiveQueryRequest(*reinterpret_cast<SQueryPacket*>(CommandBuffer));
 			}
 			else if (PacketType == ResultPacket)
@@ -172,8 +169,7 @@ bool CQueryFlooding::__acceptClient(SOCKET& vClientSocket, sockaddr_in& vClientA
 //FUNCTION:
 void CQueryFlooding::__receiveQueryRequest(SQueryPacket& vQueryPacket)
 {
-	std::cout << vQueryPacket.FileName << std::endl;
-	auto File = queryFileLocal(vQueryPacket.FileName);
+	auto File = __queryFileLocal(vQueryPacket.FileName);
 	if (File.IsExist)
 	{
 		SOCKET LocalSock = socket(AF_INET, SOCK_STREAM, 0);
@@ -185,6 +181,7 @@ void CQueryFlooding::__receiveQueryRequest(SQueryPacket& vQueryPacket)
 			ResultPacket.RecvCommandPort = m_pPeerConfig->getCommandPort();
 			ResultPacket.RecvDataPort = m_pPeerConfig->getDataPort();
 			ResultPacket.SendTime = vQueryPacket.SendTime;
+			ResultPacket.IsExistOnline = true;
 			__sendResult(LocalSock, ResultPacket);
 		}
 		closesocket(LocalSock);
@@ -218,17 +215,9 @@ void CQueryFlooding::__queryFileOnline(SQueryPacket& vFilePacket)
 
 //*********************************************************************
 //FUNCTION:
-SFile CQueryFlooding::queryFileLocal(std::string vFileName)
+SFile CQueryFlooding::__queryFileLocal(std::string vFileName)
 {
 	auto voFileQueryResult = m_pPeerFileSystem->findFile(vFileName);
-	//if (voFileQueryResult.second)
-	//{
-	//	std::cout << "Find file in local. " << voFileQueryResult.first.FilePath << std::endl;
-	//}
-	//else
-	//{
-	//	std::cout << "File not exist in local. " << voFileQueryResult.first.FilePath << std::endl;
-	//}//留着，放在CUI里。
 	return voFileQueryResult.first;
 }
 
@@ -263,7 +252,6 @@ void CQueryFlooding::__queryFlooding(SQueryPacket& vFilePacket)
 bool CQueryFlooding::__connectPeer(SOCKET &vLocalSock, std::string vIP, int vPort)
 {
 	int SocketStatus = SOCKET_ERROR;
-	std::cout << vIP << std::endl;
 	if (vLocalSock != SOCKET_ERROR)
 	{
 		sockaddr_in NearPeerAddr;

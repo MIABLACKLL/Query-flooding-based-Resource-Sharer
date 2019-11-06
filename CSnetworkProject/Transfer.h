@@ -52,10 +52,6 @@ private:
 	void __receivFilePacket(SOCKET& vClientSock);
 	void __sendTargetFile(SOCKET& vServerSock, SRequestDownloadPacket& vRequestDownloadPacket);
 	void __sendFilePacket(SOCKET& vServerSock, SFilePacket& vFilePacket, std::filesystem::directory_entry vDirEntry);
-	void __makeFilePacket();
-	void __splitFile();
-	void __saveFile();
-	void __readFile();
 
 };
 
@@ -142,7 +138,6 @@ void CTransfer::__receivFilePacket(SOCKET& vClientSock)//fixme:Õâ¸öº¯ÊýÐ´µÄÌ«¶àÁ
 	std::string recvRootPacketPath;
 	std::string shareRootPath = m_pPeerFileSystem->getSharePath();
 	std::ofstream File;
-	std::cout << std::endl;
 	while (true)
 	{
 		char FileBuffer[sizeof(SFilePacket)];
@@ -166,7 +161,6 @@ void CTransfer::__receivFilePacket(SOCKET& vClientSock)//fixme:Õâ¸öº¯ÊýÐ´µÄÌ«¶àÁ
 				std::string recvFilePath = FilePacket.File.FilePath;
 				FilePath = shareRootPath + recvFilePath.substr(recvRootPacketPath.size());
 			}
-			std::cout << FilePath << std::endl;
 			if (File.is_open()) { File.close(); }
 			File.open(FilePath, std::ios_base::app | std::ios_base::out | std::ios_base::binary);
 		}

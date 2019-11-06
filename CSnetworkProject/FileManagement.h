@@ -52,14 +52,16 @@ bool CFileManagement::changeCurrentPath(std::string vPath)
 	if (!__isPathValid(vPath)||__isOutRoot(vPath))
 		return false;
 	auto NewPath = std::filesystem::path(vPath);
-	try { NewPath = std::filesystem::absolute(NewPath); }
-	catch (...) { return false; }
-	if (std::filesystem::exists(NewPath) && std::filesystem::is_directory(NewPath))
-	{
-		m_CurrentPath = NewPath;
-		std::filesystem::current_path(m_CurrentPath);
-		return true;
+	try { 
+		NewPath = std::filesystem::absolute(NewPath); 	
+		if (std::filesystem::exists(NewPath) && std::filesystem::is_directory(NewPath))
+		{
+			m_CurrentPath = NewPath;
+			std::filesystem::current_path(m_CurrentPath);
+			return true;
+		}
 	}
+	catch (...) { return false; }
 	return false;
 }
 
@@ -88,7 +90,6 @@ bool CFileManagement::setShareDir(std::string vPath)
 std::pair<SFile, bool> CFileManagement::findFile(std::string vFileName)//´Ó¸ùÄ¿Â¼¿ªÊ¼²éÕÒ¡£fixme:ÔÝÊ±ÎÞ·¨½â¾ö²»Í¬Ä¿Â¼Í¬ÃûÎÄ¼þ/ÎÄ¼þ¼ÐµÄÎÊÌâ
 {
 	auto voFile = std::make_pair(SFile(), false);
-	std::cout << vFileName << std::endl;
 	for (auto p : std::filesystem::recursive_directory_iterator(m_RootPath))
 	{
 		if (p.path().filename().string() == vFileName)
@@ -97,9 +98,16 @@ std::pair<SFile, bool> CFileManagement::findFile(std::string vFileName)//´Ó¸ùÄ¿Â
 			voFile.first.IsExist = true;
 			strcpy_s(voFile.first.FilePath,p.path().string().c_str());
 			strcpy_s(voFile.first.FileName,vFileName.c_str());
-			voFile.first.FileSize = std::filesystem::file_size(voFile.first.FilePath);
 			if (std::filesystem::is_directory(p.path()))
+			{
+				int FileSize = 0;
 				voFile.first.IsDir = true;
+				for (auto dp : std::filesystem::recursive_directory_iterator(p.path()))
+					FileSize += dp.file_size();
+				voFile.first.FileSize = FileSize;
+			}
+			else
+				voFile.first.FileSize = std::filesystem::file_size(voFile.first.FilePath);
 			return voFile;
 		}
 	}
