@@ -6,7 +6,6 @@
 #include<filesystem>
 #include<regex>
 
-
 constexpr int MAXFILELEGTH = 256;
 //±ãÓÚÎÄ¼þÔÚÍøÂçÖÐ´«Êä£¬²»´øº¬ÓÐÖ¸ÕëµÄÀàstd::string
 struct SFile
@@ -112,20 +111,6 @@ std::pair<SFile, bool> CFileManagement::findFile(std::string vFileName)//´Ó¸ùÄ¿Â
 		}
 	}
 	return voFile;
-}
-
-//*********************************************************************
-//FUNCTION:
-void CFileManagement::listCurrenPathFileAndDir()
-{
-	for (auto p : std::filesystem::directory_iterator(m_CurrentPath))
-	{
-		if (p.is_directory()) { SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_INTENSITY | FOREGROUND_GREEN); }
-		else { SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE); }
-		std::cout << p.path().filename() << "\t";
-	}
-	std::cout << std::endl;
-	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 }
 
 //*********************************************************************

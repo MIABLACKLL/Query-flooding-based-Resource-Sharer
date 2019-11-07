@@ -106,7 +106,7 @@ void CSystemCUI::__processInput()//if else实现选择- -不忍直视
 				}
 				else
 				{
-					std::cout << "Failed: " << ResultFile.first.FileName << " not in  local system." << std::endl;
+					std::cout << "Failed: " << InputCommand.substr(5) << " not in  local system." << std::endl;
 				}
 			}
 		}
@@ -186,4 +186,18 @@ void CSystemCUI::__queryOnline(std::string vFile)
 		std::cin.clear();
 		std::cin.ignore();
 	}
+}
+
+//*********************************************************************
+//FUNCTION:
+void CFileManagement::listCurrenPathFileAndDir()
+{
+	for (auto p : std::filesystem::directory_iterator(m_CurrentPath))
+	{
+		if (p.is_directory()) { SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_INTENSITY | FOREGROUND_GREEN); }
+		else { SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE); }
+		std::cout << p.path().filename() << "\t";
+	}
+	std::cout << std::endl;
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 }
